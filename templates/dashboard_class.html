@@ -31,6 +31,7 @@
   <article class="panel">
     <h3>Структура затрат класса</h3>
     <div class="canvas-wrap"><canvas id="classCostPie"></canvas></div>
+    <p class="muted">Клик по сектору откроет срез по выбранному виду затрат внутри класса.</p>
   </article>
 </div>
 
@@ -75,6 +76,7 @@
   const serviceLabels = {{ service_labels | tojson }};
   const serviceTotals = {{ service_totals | tojson }};
   const costStructure = {{ cost_structure | tojson }};
+  const classCostLinks = {{ class_cost_links | tojson }};
   const moneyFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const money = (value) => moneyFmt.format(value || 0);
 
@@ -97,7 +99,7 @@
     },
   });
 
-  new Chart(document.getElementById("classCostPie"), {
+  const classCostPie = new Chart(document.getElementById("classCostPie"), {
     type: "pie",
     data: {
       labels: ["Прямые", "Косвенные", "Неэффективность"],
@@ -110,11 +112,19 @@
     },
     options: {
       maintainAspectRatio: false,
+      onClick: (_, elements) => {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const key = ["direct", "indirect", "ineff"][idx];
+        const href = classCostLinks[key];
+        if (href) window.location.href = href;
+      },
       plugins: {
         legend: { position: "bottom" },
         tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${money(ctx.parsed)}` } },
       },
     },
   });
+  classCostPie.canvas.style.cursor = "pointer";
 </script>
 {% endblock %}

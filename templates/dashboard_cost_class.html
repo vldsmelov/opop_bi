@@ -1,0 +1,172 @@
+{% extends "dashboard_shell.html" %}
+{% block title %}{{ cost_meta.title }} - {{ class_row.name }}{% endblock %}
+{% block content %}
+<h2 class="title">{{ cost_meta.title }}: класс {{ class_row.name }}</h2>
+<p class="muted">Уровень 3. Срез выбранного вида затрат по услугам класса с переходом к деталям услуги.</p>
+
+<div class="metrics" style="margin-top:10px">
+  <article class="metric">
+    <p class="k">{{ cost_meta.title }} в классе</p>
+    <p class="v">{{ cost_scope.selected_total | money }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Доля класса в {{ cost_meta.title }}</p>
+    <p class="v">{{ class_share_global | pct }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Ранг класса</p>
+    <p class="v">{{ class_rank }} / {{ navigation.class_rows | length }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Услуг в классе</p>
+    <p class="v">{{ class_row.services_count }}</p>
+  </article>
+</div>
+
+<div class="split" style="margin-top:10px">
+  <article class="panel">
+    <h3>{{ cost_meta.title }} по услугам класса</h3>
+    <div class="canvas-wrap"><canvas id="classServicesCostChart"></canvas></div>
+    <p class="muted">Клик по столбцу открывает карточку услуги по выбранному виду затрат.</p>
+  </article>
+  <article class="panel">
+    <h3>Структура {{ cost_meta.title }} по статьям</h3>
+    <div class="canvas-wrap"><canvas id="classComponentsCostChart"></canvas></div>
+  </article>
+</div>
+
+<article class="panel" style="margin-top:10px">
+  <h3>Услуги класса по {{ cost_meta.title }}</h3>
+  <div class="table-wrap">
+    <table class="sortable-table">
+      <thead>
+        <tr>
+          <th class="sortable" data-sort-type="text">Услуга</th>
+          <th class="sortable" data-sort-type="number">{{ cost_meta.title }}</th>
+          <th class="sortable" data-sort-type="number">Доля в {{ cost_meta.title }} класса</th>
+          <th class="sortable" data-sort-type="number">Доля в услуге</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in cost_scope.service_rows %}
+        <tr>
+          <td><a class="name-link" href="{{ row.service_href }}">{{ row.service_name }}</a></td>
+          <td class="num">{{ row.value | money }}</td>
+          <td class="num">{{ row.share_in_scope | pct }}</td>
+          <td class="num">{{ row.share_in_service | pct }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
+
+<article class="panel" style="margin-top:10px">
+  <h3>Детализация статей {{ cost_meta.title }}</h3>
+  <div class="table-wrap">
+    <table class="sortable-table">
+      <thead>
+        <tr>
+          <th class="sortable" data-sort-type="text">Статья</th>
+          <th class="sortable" data-sort-type="number">Сумма</th>
+          <th class="sortable" data-sort-type="number">Доля в {{ cost_meta.title }} класса</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in cost_scope.component_rows %}
+        <tr>
+          <td>{{ row.component }}</td>
+          <td class="num">{{ row.value | money }}</td>
+          <td class="num">{{ row.share_in_scope | pct }}</td>
+        </tr>
+        {% endfor %}
+        {% if not cost_scope.component_rows %}
+        <tr>
+          <td colspan="3">Детализация по статьям отсутствует для выбранного среза.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const serviceRows = {{ cost_scope.service_rows | tojson }};
+  const componentRows = {{ cost_scope.component_rows | tojson }};
+  const colorBase = {{ cost_meta.color | tojson }};
+  const moneyFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pctFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const money = (value) => moneyFmt.format(value || 0);
+  const pct = (value) => `${pctFmt.format(value || 0)}%`;
+
+  const serviceRowsPlot = serviceRows.filter((row) => row.value > 0);
+  const componentRowsPlot = componentRows.filter((row) => row.value > 0).slice(0, 15);
+
+  const serviceChart = new Chart(document.getElementById("classServicesCostChart"), {
+    type: "bar",
+    data: {
+      labels: serviceRowsPlot.map((row) => row.service_name),
+      datasets: [{
+        label: "Сумма",
+        data: serviceRowsPlot.map((row) => row.value),
+        backgroundColor: "#2f6ba9",
+        borderRadius: 8,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      indexAxis: "y",
+      onClick: (_, elements) => {
+        if (!elements.length) return;
+        const row = serviceRowsPlot[elements[0].index];
+        if (row?.service_href) window.location.href = row.service_href;
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const row = serviceRowsPlot[ctx.dataIndex];
+              return `${money(ctx.raw)} (${pct(row.share_in_scope)} от класса)`;
+            },
+          },
+        },
+      },
+      scales: { x: { ticks: { callback: (v) => money(v) } } },
+    },
+  });
+  serviceChart.canvas.style.cursor = "pointer";
+
+  new Chart(document.getElementById("classComponentsCostChart"), {
+    type: "bar",
+    data: {
+      labels: componentRowsPlot.map((row) => row.component),
+      datasets: [{
+        label: "Сумма статьи",
+        data: componentRowsPlot.map((row) => row.value),
+        backgroundColor: colorBase,
+        borderRadius: 8,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      indexAxis: "y",
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const row = componentRowsPlot[ctx.dataIndex];
+              return `${money(ctx.raw)} (${pct(row.share_in_scope)} от класса)`;
+            },
+          },
+        },
+      },
+      scales: { x: { ticks: { callback: (v) => money(v) } } },
+    },
+  });
+</script>
+{% endblock %}

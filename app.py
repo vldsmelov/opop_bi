@@ -574,6 +574,99 @@ def calc_totals(services: list[dict]) -> dict:
     }
 
 
+def get_cost_meta_or_404(cost_key: str) -> dict:
+    meta = COST_TYPE_META.get(cost_key)
+    if not meta:
+        abort(404, description=f"Тип затрат не найден: {cost_key}")
+    return meta
+
+
+def build_cost_scope_data(services: list[dict], cost_key: str) -> dict:
+    meta = get_cost_meta_or_404(cost_key)
+    field = meta["field"]
+    details_field = meta["details_field"]
+
+    totals = calc_totals(services)
+    selected_total = sum(float(service.get(field, 0.0)) for service in services)
+
+    class_buckets: dict[str, dict] = {}
+    service_rows: list[dict] = []
+    component_totals: defaultdict[str, float] = defaultdict(float)
+
+    for service in services:
+        class_name = str(service.get("class_name", "")).strip() or "Без класса"
+        service_name = str(service.get("service_name", "")).strip()
+        service_total = float(service.get("total_cost", 0.0))
+        selected_value = float(service.get(field, 0.0))
+
+        service_rows.append(
+            {
+                "class_name": class_name,
+                "service_name": service_name,
+                "value": selected_value,
+                "service_total": service_total,
+                "share_in_service": (selected_value / service_total * 100.0) if service_total else 0.0,
+                "share_in_scope": (selected_value / selected_total * 100.0) if selected_total else 0.0,
+            }
+        )
+
+        bucket = class_buckets.setdefault(
+            class_name,
+            {
+                "class_name": class_name,
+                "services_count": 0,
+                "value": 0.0,
+                "class_total": 0.0,
+            },
+        )
+        bucket["services_count"] += 1
+        bucket["value"] += selected_value
+        bucket["class_total"] += service_total
+
+        for component, value in (service.get(details_field, {}) or {}).items():
+            component_totals[str(component)] += float(value)
+
+    service_rows.sort(key=lambda row: (row["value"], row["service_total"]), reverse=True)
+
+    class_rows = list(class_buckets.values())
+    class_rows.sort(key=lambda row: (row["value"], row["class_total"]), reverse=True)
+    for row in class_rows:
+        row["share_in_scope"] = (row["value"] / selected_total * 100.0) if selected_total else 0.0
+        row["share_in_class"] = (
+            (row["value"] / row["class_total"] * 100.0) if row["class_total"] else 0.0
+        )
+
+    component_rows = [
+        {
+            "component": name,
+            "value": amount,
+            "share_in_scope": (amount / selected_total * 100.0) if selected_total else 0.0,
+        }
+        for name, amount in component_totals.items()
+    ]
+    component_rows.sort(key=lambda row: row["value"], reverse=True)
+
+    top_class_name = class_rows[0]["class_name"] if class_rows else "-"
+    top_class_value = class_rows[0]["value"] if class_rows else 0.0
+    top_service_name = service_rows[0]["service_name"] if service_rows else "-"
+    top_service_value = service_rows[0]["value"] if service_rows else 0.0
+
+    return {
+        "cost_key": cost_key,
+        "meta": meta,
+        "scope_total": totals["total"],
+        "selected_total": selected_total,
+        "share_of_scope": (selected_total / totals["total"] * 100.0) if totals["total"] else 0.0,
+        "service_rows": service_rows,
+        "class_rows": class_rows,
+        "component_rows": component_rows,
+        "top_class_name": top_class_name,
+        "top_class_value": top_class_value,
+        "top_service_name": top_service_name,
+        "top_service_value": top_service_value,
+    }
+
+
 def build_navigation_data(dataset: dict) -> dict:
     services = list(dataset.get("services", []))
     services = [service for service in services if service.get("service_name")]
@@ -693,6 +786,8 @@ def render_dashboard_error(error: str, status_code: int = 500):
             current_class_name=None,
             current_service_name=None,
             current_cost_title=None,
+            current_cost_key=None,
+            navigation_mode="class",
             breadcrumbs=[{"name": "Главная", "href": url_for("dashboard_home")}],
         ),
         status_code,
@@ -731,16 +826,151 @@ def dashboard_home():
             overview=overview,
             navigation=navigation,
             service_picker=service_picker,
+            cost_drill_links={
+                key: url_for("dashboard_cost_overview", cost_key=key)
+                for key in COST_TYPE_META
+            },
             current_level=1,
             current_class_name=None,
             current_service_name=None,
             current_cost_title=None,
+            current_cost_key=None,
+            navigation_mode="class",
             breadcrumbs=[{"name": "Главная", "href": url_for("dashboard_home")}],
         )
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise
         return render_dashboard_error(f"Ошибка построения дашборда: {exc}")
+
+
+@app.route("/dashboard/cost/<cost_key>")
+def dashboard_cost_overview(cost_key: str):
+    if not EXCEL_PATH.exists():
+        return render_dashboard_error(f"Файл не найден: {EXCEL_PATH}", status_code=404)
+
+    try:
+        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        cost_scope = build_cost_scope_data(navigation["services"], cost_key)
+        cost_meta = cost_scope["meta"]
+
+        for row in cost_scope["class_rows"]:
+            row["href"] = url_for(
+                "dashboard_cost_class",
+                cost_key=cost_key,
+                class_name=row["class_name"],
+            )
+
+        for row in cost_scope["service_rows"]:
+            row["class_href"] = url_for(
+                "dashboard_cost_class",
+                cost_key=cost_key,
+                class_name=row["class_name"],
+            )
+            row["service_href"] = url_for(
+                "dashboard_cost_detail",
+                class_name=row["class_name"],
+                service_name=row["service_name"],
+                cost_key=cost_key,
+                source="cost",
+            )
+
+        breadcrumbs = [
+            {"name": "Главная", "href": url_for("dashboard_home")},
+            {
+                "name": cost_meta["title"],
+                "href": url_for("dashboard_cost_overview", cost_key=cost_key),
+            },
+        ]
+
+        return render_template(
+            "dashboard_cost_overview.html",
+            overview=overview,
+            navigation=navigation,
+            cost_scope=cost_scope,
+            cost_meta=cost_meta,
+            current_level=2,
+            current_class_name=None,
+            current_service_name=None,
+            current_cost_title=cost_meta["title"],
+            current_cost_key=cost_key,
+            navigation_mode="cost",
+            breadcrumbs=breadcrumbs,
+        )
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
+        return render_dashboard_error(f"Ошибка построения среза затрат: {exc}")
+
+
+@app.route("/dashboard/cost/<cost_key>/class/<class_name>")
+def dashboard_cost_class(cost_key: str, class_name: str):
+    if not EXCEL_PATH.exists():
+        return render_dashboard_error(f"Файл не найден: {EXCEL_PATH}", status_code=404)
+
+    try:
+        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        class_row = get_class_or_404(navigation, class_name)
+        cost_scope = build_cost_scope_data(class_row["services"], cost_key)
+        global_scope = build_cost_scope_data(navigation["services"], cost_key)
+        cost_meta = cost_scope["meta"]
+
+        global_classes = global_scope["class_rows"]
+        class_rank = next(
+            (idx + 1 for idx, row in enumerate(global_classes) if row["class_name"] == class_name),
+            0,
+        )
+        class_share_global = next(
+            (row.get("share_in_scope", 0.0) for row in global_classes if row["class_name"] == class_name),
+            0.0,
+        )
+
+        for row in cost_scope["service_rows"]:
+            row["service_href"] = url_for(
+                "dashboard_cost_detail",
+                class_name=class_name,
+                service_name=row["service_name"],
+                cost_key=cost_key,
+                source="cost",
+            )
+
+        breadcrumbs = [
+            {"name": "Главная", "href": url_for("dashboard_home")},
+            {
+                "name": cost_meta["title"],
+                "href": url_for("dashboard_cost_overview", cost_key=cost_key),
+            },
+            {
+                "name": class_name,
+                "href": url_for(
+                    "dashboard_cost_class",
+                    cost_key=cost_key,
+                    class_name=class_name,
+                ),
+            },
+        ]
+
+        return render_template(
+            "dashboard_cost_class.html",
+            overview=overview,
+            navigation=navigation,
+            class_row=class_row,
+            cost_scope=cost_scope,
+            cost_meta=cost_meta,
+            class_rank=class_rank,
+            class_share_global=class_share_global,
+            current_level=3,
+            current_class_name=class_name,
+            current_service_name=None,
+            current_cost_title=cost_meta["title"],
+            current_cost_key=cost_key,
+            navigation_mode="cost",
+            breadcrumbs=breadcrumbs,
+        )
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
+        return render_dashboard_error(f"Ошибка построения среза класса: {exc}")
 
 
 @app.route("/dashboard/class/<class_name>")
@@ -776,10 +1006,16 @@ def dashboard_class(class_name: str):
             service_labels=service_labels,
             service_totals=service_totals,
             cost_structure=cost_structure,
+            class_cost_links={
+                key: url_for("dashboard_cost_class", cost_key=key, class_name=class_name)
+                for key in COST_TYPE_META
+            },
             current_level=2,
             current_class_name=class_name,
             current_service_name=None,
             current_cost_title=None,
+            current_cost_key=None,
+            navigation_mode="class",
             breadcrumbs=breadcrumbs,
         )
     except Exception as exc:
@@ -868,6 +1104,8 @@ def dashboard_service(class_name: str, service_name: str):
             current_class_name=class_name,
             current_service_name=service_name,
             current_cost_title=None,
+            current_cost_key=None,
+            navigation_mode="class",
             breadcrumbs=breadcrumbs,
         )
     except Exception as exc:
@@ -887,7 +1125,8 @@ def dashboard_cost_detail(class_name: str, service_name: str, cost_key: str):
         _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
         class_row = get_class_or_404(navigation, class_name)
         service = get_service_or_404(navigation, class_name, service_name)
-        meta = COST_TYPE_META[cost_key]
+        meta = get_cost_meta_or_404(cost_key)
+        source = request.args.get("source", "").strip().casefold()
 
         selected_value = float(service.get(meta["field"], 0.0))
         selected_share = (
@@ -919,6 +1158,13 @@ def dashboard_cost_detail(class_name: str, service_name: str, cost_key: str):
                     "service_name": peer["service_name"],
                     "value": peer_value,
                     "is_current": peer["service_name"] == service_name,
+                    "href": url_for(
+                        "dashboard_cost_detail",
+                        class_name=class_name,
+                        service_name=peer["service_name"],
+                        cost_key=cost_key,
+                        source="cost" if source == "cost" else None,
+                    ),
                 }
             )
         peer_rows.sort(key=lambda row: row["value"], reverse=True)
@@ -969,6 +1215,14 @@ def dashboard_cost_detail(class_name: str, service_name: str, cost_key: str):
             current_class_name=class_name,
             current_service_name=service_name,
             current_cost_title=meta["title"],
+            current_cost_key=cost_key,
+            navigation_mode="cost" if source == "cost" else "class",
+            cost_overview_href=url_for("dashboard_cost_overview", cost_key=cost_key),
+            cost_class_href=url_for(
+                "dashboard_cost_class",
+                cost_key=cost_key,
+                class_name=class_name,
+            ),
             breadcrumbs=breadcrumbs,
         )
     except Exception as exc:
