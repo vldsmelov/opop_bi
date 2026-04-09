@@ -8,64 +8,62 @@
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+        font-family: "Trebuchet MS", sans-serif;
         background:
-          radial-gradient(1000px 500px at 85% -10%, #d9ece8 0%, transparent 70%),
-          radial-gradient(900px 400px at -5% 20%, #ffe6cc 0%, transparent 70%),
-          linear-gradient(180deg, #f8f8f3 0%, #edf3f8 100%);
-        color: #18202a;
+          radial-gradient(980px 480px at 100% -5%, #d8efe8 0%, transparent 70%),
+          radial-gradient(840px 420px at -10% 105%, #dce9f8 0%, transparent 72%),
+          linear-gradient(180deg, #f8fbfe 0%, #edf3f8 100%);
         display: grid;
         place-items: center;
-        padding: 24px;
+        color: #14283d;
+        padding: 16px;
       }
-
       .card {
-        width: min(920px, 100%);
-        background: #ffffff;
-        border: 1px solid #e4ebf2;
-        border-radius: 20px;
-        padding: 24px;
-        box-shadow: 0 12px 26px rgba(25, 38, 56, 0.09);
+        width: min(960px, 100%);
+        background: #fff;
+        border: 1px solid #d5e3ef;
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 10px 24px rgba(16, 33, 51, 0.06);
       }
-
       h1 {
-        margin: 0 0 8px;
-        font-size: clamp(26px, 4.5vw, 40px);
-        font-family: "Palatino Linotype", "Book Antiqua", serif;
-      }
-
-      p {
         margin: 0;
-        color: #42576e;
-        line-height: 1.45;
+        font-family: "Palatino Linotype", serif;
       }
-
+      p {
+        margin: 10px 0 0;
+        color: #547089;
+      }
       .links {
-        margin-top: 18px;
-        display: flex;
-        flex-wrap: wrap;
+        margin-top: 16px;
+        display: grid;
         gap: 10px;
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
       }
-
-      .link {
+      a {
         text-decoration: none;
-        color: #0e4f8e;
+        border: 1px solid #c8d9eb;
+        border-radius: 12px;
         background: #eef6ff;
-        border: 1px solid #d1e2f5;
-        border-radius: 10px;
-        padding: 10px 12px;
+        color: #165487;
+        padding: 12px;
         font-weight: 700;
+      }
+      a:hover { background: #e2effd; }
+      @media (max-width: 860px) {
+        .links { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
     <main class="card">
-      <h1>Проект дашборда</h1>
-      <p>Основной экран готов: переходите в дашборд с метриками и детализацией.</p>
+      <h1>Проект BI-дашборда</h1>
+      <p>Основной сценарий теперь построен как вертикальный drill-down: Главная → Класс → Услуга → Вид затрат.</p>
       <div class="links">
-        <a class="link" href="/dashboard">Открыть дашборд</a>
-        <a class="link" href="/calculation-services-debug">Тех. расчёты (debug)</a>
-        <a class="link" href="/excel-debug">Все листы Excel (debug)</a>
+        <a href="/dashboard">Открыть новый дашборд (вертикальная навигация)</a>
+        <a href="/dashboard/legacy">Открыть старый экран (legacy)</a>
+        <a href="/calculation-services-debug">Техническая страница по расчетам</a>
+        <a href="/excel-debug">Все листы Excel (debug)</a>
       </div>
     </main>
   </body>
