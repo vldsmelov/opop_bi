@@ -21,9 +21,15 @@
       .metric { border:1px solid var(--line); border-radius:12px; padding:10px; background:#fbfdff; }
       .metric .k { font-size:12px; text-transform:uppercase; color:var(--muted); }
       .metric .v { font-size:22px; font-weight:800; margin-top:6px; }
-      .controls { display:grid; gap:10px; grid-template-columns:repeat(4,minmax(150px,1fr)); }
+      .layout-grid { display:grid; gap:12px; grid-template-columns:minmax(260px,1fr) minmax(520px,2fr); align-items:start; }
+      .sidebar {
+        border:1px solid var(--line);
+        border-radius:12px;
+        padding:12px;
+        background:#fbfdff;
+      }
+      .controls { display:grid; gap:10px; grid-template-columns:1fr; }
       .control { display:grid; gap:5px; }
-      .control-wide { grid-column: span 2; }
       .control label { font-size:12px; color:var(--muted); }
       input,select,button { border:1px solid #cfdbe9; border-radius:9px; padding:8px 10px; font:inherit; }
       .class-toggles { display:flex; gap:8px; flex-wrap:wrap; }
@@ -52,10 +58,10 @@
       .mode b { color:var(--muted); font-size:13px; }
       .mode-btn { background:#f4f8fc; color:#0e416e; font-weight:700; cursor:pointer; }
       .mode-btn.active { background:#dff0ff; border-color:#a6c9eb; }
-      .summary { margin-top:10px; display:grid; gap:10px; grid-template-columns:repeat(4,minmax(140px,1fr)); }
-      .summary div { border:1px solid var(--line); border-radius:10px; padding:8px 10px; color:var(--muted); background:#fbfdff; }
+      .summary { margin-top:10px; display:grid; gap:10px; grid-template-columns:1fr; }
+      .summary div { border:1px solid var(--line); border-radius:10px; padding:8px 10px; color:var(--muted); background:#ffffff; }
       .summary strong { color:var(--ink); }
-      .charts { display:grid; gap:10px; grid-template-columns:repeat(2,minmax(260px,1fr)); }
+      .charts { display:grid; gap:10px; grid-template-columns:repeat(2,minmax(220px,1fr)); }
       .chart { border:1px solid var(--line); border-radius:12px; padding:10px; }
       .chart.wide { grid-column:1/-1; }
       .canvas-wrap { min-height:280px; }
@@ -67,8 +73,7 @@
       .error { border:1px solid #f2c6c6; background:#fff1f1; color:#8b2020; border-radius:10px; padding:10px; }
       @media (max-width:1100px) {
         .metrics { grid-template-columns:repeat(3,minmax(130px,1fr)); }
-        .controls,.summary,.charts { grid-template-columns:1fr; }
-        .control-wide { grid-column: span 1; }
+        .layout-grid,.controls,.summary,.charts { grid-template-columns:1fr; }
       }
       @media (max-width:700px) { .metrics { grid-template-columns:repeat(2,minmax(130px,1fr)); } }
     </style>
@@ -103,76 +108,68 @@
       </section>
 
       <section class="card">
-        <h2>Фильтры И Режим</h2>
-        <div class="controls">
-          <div class="control control-wide">
-            <label>Классы (по умолчанию все включены)</label>
-            <div id="classToggles" class="class-toggles">
-              {% for class_item in dashboard.classes %}
-              <button
-                type="button"
-                class="class-toggle-btn active"
-                data-class-name="{{ class_item.name }}"
-              >
-                {{ class_item.name }}
-              </button>
-              {% endfor %}
+        <h2>Фильтры И Визуальный Срез</h2>
+        <div class="layout-grid">
+          <aside class="sidebar">
+            <div class="controls">
+              <div class="control">
+                <label>Классы (по умолчанию все включены)</label>
+                <div id="classToggles" class="class-toggles">
+                  {% for class_item in dashboard.classes %}
+                  <button
+                    type="button"
+                    class="class-toggle-btn active"
+                    data-class-name="{{ class_item.name }}"
+                  >
+                    {{ class_item.name }}
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="control">
+                <label for="searchFilter">Поиск услуги</label>
+                <input id="searchFilter" type="text" list="servicesList" placeholder="Начните вводить и выберите услугу из списка" />
+                <datalist id="servicesList"></datalist>
+                <div id="searchStatus" class="search-status">
+                  Фильтр услуги не выбран.
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="control control-wide">
-            <label for="searchFilter">Поиск услуги</label>
-            <input id="searchFilter" type="text" list="servicesList" placeholder="Начните вводить и выберите услугу из списка" />
-            <datalist id="servicesList"></datalist>
-            <div id="searchStatus" class="search-status">
-              Фильтр услуги не выбран.
+            <div class="mode">
+              <b>Режим графиков:</b>
+              <button id="modeAbs" class="mode-btn active">Абсолютные</button>
+              <button id="modePct" class="mode-btn">Проценты</button>
+              <button id="resetFilters" class="mode-btn">Сброс</button>
             </div>
+            <div class="summary">
+              <div>Услуг в срезе: <strong id="sliceServices">-</strong></div>
+              <div>Общая сумма: <strong id="sliceTotal">-</strong></div>
+              <div>Прямые / Косвенные: <strong id="sliceDirectIndirect">-</strong></div>
+              <div>Неэффективность: <strong id="sliceInefficiency">-</strong></div>
+            </div>
+          </aside>
+          <div class="charts">
+            <article class="chart">
+              <h3>Структура стоимости (pie)</h3>
+              <div class="canvas-wrap"><canvas id="costStructurePie"></canvas></div>
+            </article>
+            <article class="chart">
+              <h3>Доли классов (pie)</h3>
+              <div class="canvas-wrap"><canvas id="classSharePie"></canvas></div>
+            </article>
+            <article class="chart">
+              <h3>Итого по классам (bar)</h3>
+              <div class="canvas-wrap"><canvas id="classTotalsBar"></canvas></div>
+            </article>
+            <article class="chart">
+              <h3>Состав затрат по классам (stacked)</h3>
+              <div class="canvas-wrap"><canvas id="classStackBar"></canvas></div>
+            </article>
+            <article class="chart wide">
+              <h3>Топ услуг по стоимости (bar)</h3>
+              <div class="canvas-wrap"><canvas id="topServicesBar"></canvas></div>
+            </article>
           </div>
-          <div class="control">
-            <label for="minTotalFilter">Мин. сумма</label>
-            <input id="minTotalFilter" type="number" min="0" step="0.01" />
-          </div>
-          <div class="control">
-            <label for="maxTotalFilter">Макс. сумма</label>
-            <input id="maxTotalFilter" type="number" min="0" step="0.01" />
-          </div>
-        </div>
-        <div class="mode">
-          <b>Режим графиков:</b>
-          <button id="modeAbs" class="mode-btn active">Абсолютные</button>
-          <button id="modePct" class="mode-btn">Проценты</button>
-          <button id="resetFilters" class="mode-btn">Сброс</button>
-        </div>
-        <div class="summary">
-          <div>Услуг в срезе: <strong id="sliceServices">-</strong></div>
-          <div>Общая сумма: <strong id="sliceTotal">-</strong></div>
-          <div>Прямые / Косвенные: <strong id="sliceDirectIndirect">-</strong></div>
-          <div>Неэффективность: <strong id="sliceInefficiency">-</strong></div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Визуальный Срез</h2>
-        <div class="charts">
-          <article class="chart">
-            <h3>Структура стоимости (pie)</h3>
-            <div class="canvas-wrap"><canvas id="costStructurePie"></canvas></div>
-          </article>
-          <article class="chart">
-            <h3>Доли классов (pie)</h3>
-            <div class="canvas-wrap"><canvas id="classSharePie"></canvas></div>
-          </article>
-          <article class="chart">
-            <h3>Итого по классам (bar)</h3>
-            <div class="canvas-wrap"><canvas id="classTotalsBar"></canvas></div>
-          </article>
-          <article class="chart">
-            <h3>Состав затрат по классам (stacked)</h3>
-            <div class="canvas-wrap"><canvas id="classStackBar"></canvas></div>
-          </article>
-          <article class="chart wide">
-            <h3>Топ услуг по стоимости (bar)</h3>
-            <div class="canvas-wrap"><canvas id="topServicesBar"></canvas></div>
-          </article>
         </div>
       </section>
 
@@ -215,8 +212,6 @@
         searchFilter: document.getElementById("searchFilter"),
         servicesList: document.getElementById("servicesList"),
         searchStatus: document.getElementById("searchStatus"),
-        minTotalFilter: document.getElementById("minTotalFilter"),
-        maxTotalFilter: document.getElementById("maxTotalFilter"),
         modeAbs: document.getElementById("modeAbs"),
         modePct: document.getElementById("modePct"),
         reset: document.getElementById("resetFilters"),
@@ -229,7 +224,6 @@
 
       const money = (v) => fmtMoney.format(v || 0);
       const pct = (v) => `${fmtPct.format(v || 0)}%`;
-      const n = (v) => (v === "" || v == null ? null : Number(v));
       const serviceNames = [...new Set(allServices.map((x) => x.service_name))].sort((a, b) => a.localeCompare(b, "ru"));
 
       for (const btn of el.classToggleButtons) {
@@ -286,13 +280,9 @@
       }
 
       function filteredServices() {
-        const min = n(el.minTotalFilter.value);
-        const max = n(el.maxTotalFilter.value);
         return allServices.filter((s) => {
           if (!state.activeClasses.has(s.class_name)) return false;
           if (state.selectedService && s.service_name !== state.selectedService) return false;
-          if (min != null && s.total_cost < min) return false;
-          if (max != null && s.total_cost > max) return false;
           return true;
         });
       }
@@ -453,16 +443,12 @@
       el.searchFilter.addEventListener("blur", () => {
         syncServiceSelectionFromInput();
       });
-      el.minTotalFilter.addEventListener("input", render);
-      el.maxTotalFilter.addEventListener("input", render);
       el.modeAbs.addEventListener("click", () => setMode("absolute"));
       el.modePct.addEventListener("click", () => setMode("percent"));
       el.reset.addEventListener("click", () => {
         state.activeClasses = new Set(el.classToggleButtons.map((btn) => btn.dataset.className));
         el.searchFilter.value = "";
         state.selectedService = null;
-        el.minTotalFilter.value = "";
-        el.maxTotalFilter.value = "";
         updateClassToggleVisuals();
         updateSearchStatus("", "Фильтр услуги не выбран.");
         setMode("absolute");
