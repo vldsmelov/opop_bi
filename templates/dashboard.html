@@ -5,89 +5,196 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Дашборд: Калькуляция услуг</title>
     <style>
-      :root { --ink:#1b2b3b; --muted:#566b80; --line:#d7e0ea; --accent:#1f6f66; }
+      :root {
+        --ink:#102133;
+        --muted:#557086;
+        --line:#d9e5ef;
+        --line-strong:#bfd2e2;
+        --accent:#1f6f66;
+        --accent-soft:#d9efe9;
+        --blue:#2c73b7;
+        --surface:#ffffff;
+        --surface-soft:#f7fbff;
+      }
       * { box-sizing:border-box; }
       body {
-        margin:0; color:var(--ink); font-family:"Trebuchet MS",sans-serif;
-        background: radial-gradient(900px 500px at 100% -10%, #d7f0ea 0%, transparent 70%), linear-gradient(#f7f8f1,#edf3f8);
+        margin:0;
+        color:var(--ink);
+        font-family:"Trebuchet MS",sans-serif;
+        background:
+          radial-gradient(900px 520px at 100% -5%, #d8efe8 0%, transparent 70%),
+          radial-gradient(700px 360px at -5% 105%, #dbeaf7 0%, transparent 72%),
+          linear-gradient(180deg, #f8fbfd 0%, #edf4f9 100%);
       }
       .wrap { width:100%; max-width:none; margin:0; padding:20px 24px; }
-      .card { background:#fff; border:1px solid #e4ebf2; border-radius:16px; padding:16px; margin-top:14px; }
-      h1,h2,h3 { margin:0 0 10px; font-family:"Palatino Linotype",serif; }
-      .muted { color:var(--muted); margin:0; }
-      .links { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-      .links a { text-decoration:none; color:#0c4f8f; border:1px solid #cfe0f3; background:#eff6ff; padding:7px 10px; border-radius:9px; font-weight:700; }
+      .card {
+        background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+        border:1px solid #dde8f2;
+        border-radius:18px;
+        padding:18px;
+        margin-top:14px;
+        box-shadow:0 12px 24px rgba(16, 33, 51, 0.05);
+      }
+      h1,h2,h3 { margin:0 0 10px; font-family:"Palatino Linotype",serif; letter-spacing:0.2px; }
+      .title-line { display:flex; align-items:center; gap:10px; }
+      .icon-chip {
+        width:28px; height:28px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center;
+        background:var(--accent-soft); color:var(--accent); border:1px solid #b5ded3; flex:0 0 auto;
+      }
+      .icon-chip svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; }
+      .muted { color:var(--muted); margin:0; line-height:1.45; }
+      .links { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+      .links a {
+        text-decoration:none; color:#0e477e; border:1px solid #c7dbef; background:#eef6ff; padding:7px 11px;
+        border-radius:10px; font-weight:700; display:inline-flex; align-items:center; gap:6px; transition:all .16s ease;
+      }
+      .links a:hover { background:#e4f1ff; border-color:#afcce9; transform:translateY(-1px); }
+      .links a svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; }
       .metrics { display:grid; gap:10px; grid-template-columns:repeat(6,minmax(140px,1fr)); }
-      .metric { border:1px solid var(--line); border-radius:12px; padding:10px; background:#fbfdff; }
-      .metric .k { font-size:12px; text-transform:uppercase; color:var(--muted); }
-      .metric .v { font-size:22px; font-weight:800; margin-top:6px; }
+      .metric {
+        border:1px solid var(--line);
+        border-radius:14px;
+        padding:10px 11px 12px;
+        background:linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+      }
+      .metric-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+      .metric .k { font-size:11px; text-transform:uppercase; color:var(--muted); font-weight:700; letter-spacing:0.4px; }
+      .metric .v { font-size:21px; font-weight:800; margin-top:8px; color:#0f273c; line-height:1.15; }
+      .metric .icon-chip { width:24px; height:24px; border-radius:8px; }
+      .metric .icon-chip svg { width:14px; height:14px; }
       .layout-grid { display:grid; gap:12px; grid-template-columns:minmax(260px,1fr) minmax(520px,2fr); align-items:start; }
       .sidebar {
         border:1px solid var(--line);
-        border-radius:12px;
+        border-radius:14px;
         padding:12px;
-        background:#fbfdff;
+        background:linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
       }
       .controls { display:grid; gap:10px; grid-template-columns:1fr; }
-      .control { display:grid; gap:5px; }
-      .control label { font-size:12px; color:var(--muted); }
-      input,select,button { border:1px solid #cfdbe9; border-radius:9px; padding:8px 10px; font:inherit; }
+      .control { display:grid; gap:6px; }
+      .control label { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+      .control label svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2; }
+      input,select,button {
+        border:1px solid #c9d9e8;
+        border-radius:10px;
+        padding:8px 10px;
+        font:inherit;
+        background:var(--surface);
+        color:var(--ink);
+      }
+      input:focus,button:focus { outline:none; border-color:#8eb6db; box-shadow:0 0 0 3px rgba(115, 164, 212, 0.2); }
+      .search-row { display:flex; align-items:center; gap:8px; }
+      .search-row input { flex:1; }
+      .icon-btn {
+        width:38px; min-width:38px; height:38px;
+        display:inline-flex; align-items:center; justify-content:center;
+        padding:0; background:#f1f7fd; color:#305876; border:1px solid #c7daea; cursor:pointer;
+      }
+      .icon-btn:hover { background:#e8f2fb; }
+      .icon-btn:disabled { opacity:.5; cursor:not-allowed; }
+      .icon-btn svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; }
       .class-toggles { display:flex; gap:8px; flex-wrap:wrap; }
       .class-toggle-btn {
         border:1px solid #cfdbe9;
         border-radius:999px;
-        padding:6px 11px;
+        padding:7px 11px;
         cursor:pointer;
-        background:#f5f8fc;
+        background:#f4f8fc;
         color:#154b78;
         font-weight:700;
       }
-      .class-toggle-btn.active {
-        background:#dff0ff;
-        border-color:#98bee2;
-      }
-      .class-toggle-btn.inactive {
-        background:#f7f8fa;
-        border-color:#dee4ec;
-        color:#7b8794;
-      }
-      .search-status { font-size:12px; color:var(--muted); min-height:16px; }
+      .class-toggle-btn.active { background:#dff0ff; border-color:#98bee2; }
+      .class-toggle-btn.inactive { background:#f7f8fa; border-color:#dee4ec; color:#7b8794; }
+      .search-status { font-size:12px; color:var(--muted); min-height:16px; line-height:1.35; }
       .search-status.warn { color:#9a5f00; }
       .search-status.ok { color:#1f6f66; }
       .mode { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; align-items:center; }
-      .mode b { color:var(--muted); font-size:13px; }
-      .mode-btn { background:#f4f8fc; color:#0e416e; font-weight:700; cursor:pointer; }
+      .mode b { color:var(--muted); font-size:13px; display:inline-flex; align-items:center; gap:6px; }
+      .mode b svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; }
+      .mode-btn {
+        background:#f3f8fc;
+        color:#10436e;
+        font-weight:700;
+        cursor:pointer;
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+      }
+      .mode-btn svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; }
       .mode-btn.active { background:#dff0ff; border-color:#a6c9eb; }
       .summary { margin-top:10px; display:grid; gap:10px; grid-template-columns:1fr; }
-      .summary div { border:1px solid var(--line); border-radius:10px; padding:8px 10px; color:var(--muted); background:#ffffff; }
+      .summary div {
+        border:1px solid var(--line);
+        border-radius:10px;
+        padding:9px 10px;
+        color:var(--muted);
+        background:#ffffff;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:8px;
+      }
       .summary strong { color:var(--ink); }
+      .summary-label { display:inline-flex; align-items:center; gap:7px; }
+      .summary-label svg { width:14px; height:14px; stroke:var(--blue); fill:none; stroke-width:2; }
       .charts { display:grid; gap:10px; grid-template-columns:repeat(2,minmax(220px,1fr)); }
-      .chart { border:1px solid var(--line); border-radius:12px; padding:10px; }
+      .chart {
+        border:1px solid var(--line);
+        border-radius:14px;
+        padding:11px;
+        background:linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+      }
+      .chart h3 { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+      .chart h3 svg { width:15px; height:15px; stroke:#326389; fill:none; stroke-width:2; }
       .chart.wide { grid-column:1/-1; }
       .canvas-wrap { min-height:280px; }
       .top-chart-wrap { min-height:360px; }
-      .table-wrap { overflow:auto; }
+      .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:12px; }
       table { width:100%; border-collapse:collapse; min-width:820px; }
       th,td { border:1px solid var(--line); padding:7px 9px; }
-      th { background:#f3f7fb; text-align:left; }
+      th {
+        background:#eef5fb;
+        text-align:left;
+        position:sticky;
+        top:0;
+        z-index:1;
+      }
       td.num { text-align:right; white-space:nowrap; }
       .error { border:1px solid #f2c6c6; background:#fff1f1; color:#8b2020; border-radius:10px; padding:10px; }
       @media (max-width:1100px) {
         .metrics { grid-template-columns:repeat(3,minmax(130px,1fr)); }
         .layout-grid,.controls,.summary,.charts { grid-template-columns:1fr; }
       }
-      @media (max-width:700px) { .metrics { grid-template-columns:repeat(2,minmax(130px,1fr)); } }
+      @media (max-width:700px) {
+        .wrap { padding:14px 12px; }
+        .metrics { grid-template-columns:repeat(2,minmax(130px,1fr)); }
+      }
     </style>
   </head>
   <body>
+    <svg width="0" height="0" style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true" focusable="false">
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></symbol>
+      <symbol id="i-calc" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h3M13 11h3M8 15h3M13 15h3"/></symbol>
+      <symbol id="i-sheet" viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h8M9 16h8"/></symbol>
+      <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 5h16l-6 7v6l-4 2v-8z"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.2-4.2"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6 18 18M18 6 6 18"/></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h6M14 6h6M10 6v6M4 18h10M18 18h2M14 18v-6"/></symbol>
+      <symbol id="i-percent" viewBox="0 0 24 24"><path d="m5 19 14-14"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></symbol>
+      <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></symbol>
+      <symbol id="i-pie" viewBox="0 0 24 24"><path d="M12 3v9h9"/><path d="M21 12a9 9 0 1 1-9-9"/></symbol>
+      <symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20V9M12 20V4M19 20v-7"/></symbol>
+      <symbol id="i-stack" viewBox="0 0 24 24"><path d="m4 8 8-4 8 4-8 4-8-4zM4 12l8 4 8-4M4 16l8 4 8-4"/></symbol>
+      <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 10h18M9 4v16M15 4v16"/></symbol>
+      <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></symbol>
+    </svg>
     <div class="wrap">
       <section class="card">
-        <h1>Дашборд по услугам (лист «Калькуляция»)</h1>
+        <h1 class="title-line"><span class="icon-chip"><svg><use href="#i-bars"></use></svg></span>Дашборд по услугам (лист «Калькуляция»)</h1>
         <p class="muted">Фильтры и графики пересчитываются в реальном времени. Режим графиков: абсолютные значения или проценты.</p>
         <div class="links">
-          <a href="/">Главная</a>
-          <a href="/calculation-services-debug">Тех. расчёты</a>
-          <a href="/excel-debug">Все листы Excel</a>
+          <a href="/"><svg><use href="#i-home"></use></svg>Главная</a>
+          <a href="/calculation-services-debug"><svg><use href="#i-calc"></use></svg>Тех. расчёты</a>
+          <a href="/excel-debug"><svg><use href="#i-sheet"></use></svg>Все листы Excel</a>
         </div>
       </section>
 
@@ -97,24 +204,42 @@
 
       {% if dashboard %}
       <section class="card">
-        <h2>Ключевые Метрики</h2>
+        <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-pie"></use></svg></span>Ключевые Метрики</h2>
         <div class="metrics">
-          <div class="metric"><div class="k">Услуг</div><div class="v">{{ dashboard.totals.total_services }}</div></div>
-          <div class="metric"><div class="k">Классов</div><div class="v">{{ dashboard.totals.total_classes }}</div></div>
-          <div class="metric"><div class="k">Прямые</div><div class="v">{{ dashboard.totals.direct_total | money }}</div></div>
-          <div class="metric"><div class="k">Косвенные</div><div class="v">{{ dashboard.totals.indirect_total | money }}</div></div>
-          <div class="metric"><div class="k">Неэффективность</div><div class="v">{{ dashboard.totals.inefficiency_total | money }}</div></div>
-          <div class="metric"><div class="k">Итого</div><div class="v">{{ dashboard.totals.grand_total | money }}</div></div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Услуг</div><span class="icon-chip"><svg><use href="#i-dot"></use></svg></span></div>
+            <div class="v">{{ dashboard.totals.total_services }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Классов</div><span class="icon-chip"><svg><use href="#i-filter"></use></svg></span></div>
+            <div class="v">{{ dashboard.totals.total_classes }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Прямые</div><span class="icon-chip"><svg><use href="#i-bars"></use></svg></span></div>
+            <div class="v">{{ dashboard.totals.direct_total | money }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Косвенные</div><span class="icon-chip"><svg><use href="#i-stack"></use></svg></span></div>
+            <div class="v">{{ dashboard.totals.indirect_total | money }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Неэффективность</div><span class="icon-chip"><svg><use href="#i-reset"></use></svg></span></div>
+            <div class="v">{{ dashboard.totals.inefficiency_total | money }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Итого</div><span class="icon-chip"><svg><use href="#i-pie"></use></svg></span></div>
+            <div class="v">{{ dashboard.totals.grand_total | money }}</div>
+          </div>
         </div>
       </section>
 
       <section class="card">
-        <h2>Фильтры И Визуальный Срез</h2>
+        <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-filter"></use></svg></span>Фильтры И Визуальный Срез</h2>
         <div class="layout-grid">
           <aside class="sidebar">
             <div class="controls">
               <div class="control">
-                <label>Классы (по умолчанию все включены)</label>
+                <label><svg><use href="#i-filter"></use></svg>Классы (по умолчанию все включены)</label>
                 <div id="classToggles" class="class-toggles">
                   {% for class_item in dashboard.classes %}
                   <button
@@ -128,8 +253,13 @@
                 </div>
               </div>
               <div class="control">
-                <label for="searchFilter">Поиск услуги</label>
-                <input id="searchFilter" type="text" list="servicesList" placeholder="Начните вводить и выберите услугу из списка" />
+                <label for="searchFilter"><svg><use href="#i-search"></use></svg>Поиск услуги</label>
+                <div class="search-row">
+                  <input id="searchFilter" type="text" list="servicesList" placeholder="Начните вводить и выберите услугу из списка" />
+                  <button id="clearSearch" type="button" class="icon-btn" title="Очистить поиск услуги" aria-label="Очистить поиск услуги">
+                    <svg><use href="#i-close"></use></svg>
+                  </button>
+                </div>
                 <datalist id="servicesList"></datalist>
                 <div id="searchStatus" class="search-status">
                   Фильтр услуги не выбран.
@@ -137,33 +267,33 @@
               </div>
             </div>
             <div class="mode">
-              <b>Режим графиков:</b>
-              <button id="modeAbs" class="mode-btn active">Абсолютные</button>
-              <button id="modePct" class="mode-btn">Проценты</button>
-              <button id="resetFilters" class="mode-btn">Сброс</button>
+              <b><svg><use href="#i-sliders"></use></svg>Режим графиков:</b>
+              <button id="modeAbs" class="mode-btn active"><svg><use href="#i-bars"></use></svg>Абсолютные</button>
+              <button id="modePct" class="mode-btn"><svg><use href="#i-percent"></use></svg>Проценты</button>
+              <button id="resetFilters" class="mode-btn"><svg><use href="#i-reset"></use></svg>Сброс</button>
             </div>
             <div class="summary">
-              <div>Услуг в срезе: <strong id="sliceServices">-</strong></div>
-              <div>Общая сумма: <strong id="sliceTotal">-</strong></div>
-              <div>Прямые / Косвенные: <strong id="sliceDirectIndirect">-</strong></div>
-              <div>Неэффективность: <strong id="sliceInefficiency">-</strong></div>
+              <div><span class="summary-label"><svg><use href="#i-dot"></use></svg>Услуг в срезе:</span><strong id="sliceServices">-</strong></div>
+              <div><span class="summary-label"><svg><use href="#i-bars"></use></svg>Общая сумма:</span><strong id="sliceTotal">-</strong></div>
+              <div><span class="summary-label"><svg><use href="#i-stack"></use></svg>Прямые / Косвенные:</span><strong id="sliceDirectIndirect">-</strong></div>
+              <div><span class="summary-label"><svg><use href="#i-filter"></use></svg>Неэффективность:</span><strong id="sliceInefficiency">-</strong></div>
             </div>
           </aside>
           <div class="charts">
             <article class="chart">
-              <h3>Структура стоимости (pie)</h3>
+              <h3><svg><use href="#i-pie"></use></svg>Структура стоимости (pie)</h3>
               <div class="canvas-wrap"><canvas id="costStructurePie"></canvas></div>
             </article>
             <article class="chart">
-              <h3>Доли классов (pie)</h3>
+              <h3><svg><use href="#i-pie"></use></svg>Доли классов (pie)</h3>
               <div class="canvas-wrap"><canvas id="classSharePie"></canvas></div>
             </article>
             <article class="chart">
-              <h3>Итого по классам (bar)</h3>
+              <h3><svg><use href="#i-bars"></use></svg>Итого по классам (bar)</h3>
               <div class="canvas-wrap"><canvas id="classTotalsBar"></canvas></div>
             </article>
             <article class="chart">
-              <h3>Состав затрат по классам (stacked)</h3>
+              <h3><svg><use href="#i-stack"></use></svg>Состав затрат по классам (stacked)</h3>
               <div class="canvas-wrap"><canvas id="classStackBar"></canvas></div>
             </article>
           </div>
@@ -171,14 +301,14 @@
       </section>
 
       <section class="card">
-        <h2>Топ услуг по стоимости: Прямые, Косвенные, Неэффективность</h2>
+        <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-stack"></use></svg></span>Топ услуг по стоимости: Прямые, Косвенные, Неэффективность</h2>
         <article class="chart">
           <div id="topServicesWrap" class="canvas-wrap top-chart-wrap"><canvas id="topServicesBar"></canvas></div>
         </article>
       </section>
 
       <section class="card">
-        <h2>Топ Услуг По Стоимости (динамический срез)</h2>
+        <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-table"></use></svg></span>Топ Услуг По Стоимости (динамический срез)</h2>
         <div class="table-wrap">
           <table>
             <thead>
@@ -214,6 +344,7 @@
         classTogglesWrap: document.getElementById("classToggles"),
         classToggleButtons: Array.from(document.querySelectorAll(".class-toggle-btn")),
         searchFilter: document.getElementById("searchFilter"),
+        clearSearch: document.getElementById("clearSearch"),
         servicesList: document.getElementById("servicesList"),
         searchStatus: document.getElementById("searchStatus"),
         modeAbs: document.getElementById("modeAbs"),
@@ -262,17 +393,23 @@
         el.searchStatus.textContent = message;
       }
 
+      function updateClearSearchState() {
+        el.clearSearch.disabled = !el.searchFilter.value.trim();
+      }
+
       function syncServiceSelectionFromInput() {
         const raw = el.searchFilter.value.trim();
         if (!raw) {
           state.selectedService = null;
           updateSearchStatus("", "Фильтр услуги не выбран.");
+          updateClearSearchState();
           return;
         }
 
         if (serviceNames.includes(raw)) {
           state.selectedService = raw;
           updateSearchStatus("ok", `Выбрана услуга: ${raw}`);
+          updateClearSearchState();
           return;
         }
 
@@ -282,6 +419,7 @@
             ? `Текст не из списка. Оставлен предыдущий выбор: ${state.selectedService}`
             : "Текст не из списка. Фильтр услуги не применен."
         );
+        updateClearSearchState();
       }
 
       function filteredServices() {
@@ -506,6 +644,14 @@
       el.searchFilter.addEventListener("blur", () => {
         syncServiceSelectionFromInput();
       });
+      el.clearSearch.addEventListener("click", () => {
+        el.searchFilter.value = "";
+        state.selectedService = null;
+        updateSearchStatus("", "Фильтр услуги не выбран.");
+        updateClearSearchState();
+        render();
+        el.searchFilter.focus();
+      });
       el.modeAbs.addEventListener("click", () => setMode("absolute"));
       el.modePct.addEventListener("click", () => setMode("percent"));
       el.reset.addEventListener("click", () => {
@@ -514,6 +660,7 @@
         state.selectedService = null;
         updateClassToggleVisuals();
         updateSearchStatus("", "Фильтр услуги не выбран.");
+        updateClearSearchState();
         setMode("absolute");
       });
 
