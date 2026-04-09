@@ -385,15 +385,15 @@
         });
       }
 
-      function stackedHorizontal(id, labels, d, i, f) {
+      function stackedHorizontal(id, labels, d, i, f, dAbs, iAbs, fAbs, totalsAbs) {
         return new Chart(document.getElementById(id), {
           type: "bar",
           data: {
             labels,
             datasets: [
-              { label: "Прямые", data: d, backgroundColor: "#1f6f66" },
-              { label: "Косвенные", data: i, backgroundColor: "#3e7cb1" },
-              { label: "Неэффективность", data: f, backgroundColor: "#d47d2f" },
+              { label: "Прямые", data: d, absData: dAbs, backgroundColor: "#1f6f66" },
+              { label: "Косвенные", data: i, absData: iAbs, backgroundColor: "#3e7cb1" },
+              { label: "Неэффективность", data: f, absData: fAbs, backgroundColor: "#d47d2f" },
             ],
           },
           options: {
@@ -407,7 +407,25 @@
               },
               y: { stacked: true },
             },
-            plugins: { legend: { position: "bottom" } },
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: {
+                callbacks: {
+                  beforeBody: (items) => {
+                    if (!items.length) return "";
+                    const idx = items[0].dataIndex;
+                    return `Суммарные затраты: ${money(totalsAbs[idx] || 0)}`;
+                  },
+                  label: (ctx) => {
+                    const absValue = ctx.dataset.absData?.[ctx.dataIndex] || 0;
+                    if (state.mode === "percent") {
+                      return `Выбранный пункт затрат (${ctx.dataset.label}): ${pct(ctx.raw)} (${money(absValue)})`;
+                    }
+                    return `Выбранный пункт затрат (${ctx.dataset.label}): ${money(absValue)}`;
+                  },
+                },
+              },
+            },
           },
         });
       }
@@ -437,11 +455,16 @@
 
         const top = [...services].sort((a, b) => b.total_cost - a.total_cost);
         const topLabels = top.map((x) => x.service_name);
-        const topDirect = state.mode === "percent" ? top.map((x) => x.total_cost ? (x.direct_cost / x.total_cost) * 100 : 0) : top.map((x) => x.direct_cost);
-        const topIndirect = state.mode === "percent" ? top.map((x) => x.total_cost ? (x.indirect_cost / x.total_cost) * 100 : 0) : top.map((x) => x.indirect_cost);
-        const topIneff = state.mode === "percent" ? top.map((x) => x.total_cost ? (x.inefficiency_cost / x.total_cost) * 100 : 0) : top.map((x) => x.inefficiency_cost);
+        const topDirectAbs = top.map((x) => x.direct_cost);
+        const topIndirectAbs = top.map((x) => x.indirect_cost);
+        const topIneffAbs = top.map((x) => x.inefficiency_cost);
+        const topTotalsAbs = top.map((x) => x.total_cost);
+
+        const topDirect = state.mode === "percent" ? top.map((x) => x.total_cost ? (x.direct_cost / x.total_cost) * 100 : 0) : topDirectAbs;
+        const topIndirect = state.mode === "percent" ? top.map((x) => x.total_cost ? (x.indirect_cost / x.total_cost) * 100 : 0) : topIndirectAbs;
+        const topIneff = state.mode === "percent" ? top.map((x) => x.total_cost ? (x.inefficiency_cost / x.total_cost) * 100 : 0) : topIneffAbs;
         setTopChartHeight(top.length);
-        charts.top = stackedHorizontal("topServicesBar", topLabels, topDirect, topIndirect, topIneff);
+        charts.top = stackedHorizontal("topServicesBar", topLabels, topDirect, topIndirect, topIneff, topDirectAbs, topIndirectAbs, topIneffAbs, topTotalsAbs);
       }
 
       function setMode(mode) {
