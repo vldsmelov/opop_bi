@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from collections import defaultdict
 from pathlib import Path
 
 import pandas as pd
@@ -16,7 +19,6 @@ def money(value: float) -> str:
         amount = float(value)
     except (TypeError, ValueError):
         amount = 0.0
-
     return f"{amount:,.2f}".replace(",", " ").replace(".", ",")
 
 
@@ -26,86 +28,138 @@ def pct(value: float) -> str:
         amount = float(value)
     except (TypeError, ValueError):
         amount = 0.0
-
     return f"{amount:.1f}%".replace(".", ",")
 
 
 def load_workbook_sheets(path: Path) -> list[dict]:
     workbook = pd.read_excel(path, sheet_name=None, engine="openpyxl")
     sheets_data = []
-
     for sheet_name, df in workbook.items():
         prepared_df = df.fillna("")
-        records = prepared_df.to_dict(orient="records")
-        columns = list(prepared_df.columns)
         sheets_data.append(
             {
                 "name": sheet_name,
-                "columns": columns,
-                "rows": records,
-                "row_count": len(records),
+                "columns": list(prepared_df.columns),
+                "rows": prepared_df.to_dict(orient="records"),
+                "row_count": len(prepared_df),
             }
         )
-
     return sheets_data
 
 
-def find_column(
-    columns: pd.Index,
-    top_level_contains: str,
-    sub_level_contains: str | None = None,
-) -> tuple:
+def clean_sub_label(value: object) -> str:
+    text = str(value or "")
+    return " ".join(text.replace("\n", " ").split())
+
+
+def is_unnamed_label(value: object) -> bool:
+    return clean_sub_label(value).casefold().startswith("unnamed:")
+
+
+def unique_columns(columns: list[tuple]) -> list[tuple]:
+    seen = set()
+    result = []
     for col in columns:
-        if not isinstance(col, tuple) or len(col) < 2:
+        if col in seen:
             continue
-
-        top_level = str(col[0]).strip()
-        sub_level = str(col[1]).strip()
-
-        if top_level_contains not in top_level:
-            continue
-
-        if sub_level_contains is not None and sub_level_contains not in sub_level:
-            continue
-
-        return col
-
-    raise ValueError(
-        "Не удалось найти колонку: "
-        f"top='{top_level_contains}', sub='{sub_level_contains}'"
-    )
+        seen.add(col)
+        result.append(col)
+    return result
 
 
-def load_calculation_services_by_class(path: Path) -> list[dict]:
-    df = pd.read_excel(
-        path,
-        sheet_name="Калькуляция",
-        header=[2, 3],
-        engine="openpyxl",
-    )
+def build_class_tables_from_services(services: list[dict]) -> list[dict]:
+    grouped: dict[str, dict] = {}
+    for service in services:
+        class_name = service["class_name"]
+        if class_name not in grouped:
+            grouped[class_name] = {
+                "class_name": class_name,
+                "services": [],
+                "direct_total": 0.0,
+                "indirect_total": 0.0,
+                "inefficiency_total": 0.0,
+                "indirect_sum_total": 0.0,
+                "grand_total": 0.0,
+            }
 
-    number_col = find_column(df.columns, "№ п/п")
-    class_col = find_column(df.columns, "Импорт / Экспорт")
-    service_col = find_column(df.columns, "Наименование показателей")
-    direct_total_col = find_column(df.columns, "Прямые расходы", "ИТОГО")
-    indirect_total_col = find_column(df.columns, "Косвенные расходы", "ИТОГО")
+        bucket = grouped[class_name]
+        bucket["services"].append(
+            {
+                "service_name": service["service_name"],
+                "direct_cost": service["direct_cost"],
+                "indirect_cost": service["indirect_cost"],
+                "inefficiency_cost": service["inefficiency_cost"],
+                "indirect_sum": service["indirect_sum"],
+                "total_cost": service["total_cost"],
+            }
+        )
+        bucket["direct_total"] += service["direct_cost"]
+        bucket["indirect_total"] += service["indirect_cost"]
+        bucket["inefficiency_total"] += service["inefficiency_cost"]
+        bucket["indirect_sum_total"] += service["indirect_sum"]
+        bucket["grand_total"] += service["total_cost"]
 
-    ineff_rent_col = find_column(df.columns, "Неэффективность", "Расходы на аренду")
-    ineff_prt_rent_col = find_column(
-        df.columns, "Неэффективность", "Расходы на аренду ПРТ (козловой кран)"
-    )
-    ineff_rzd_col = find_column(df.columns, "Неэффективность", "Расходы на услуги РЖД")
+    return list(grouped.values())
 
-    selected_columns = [
+
+def load_calculation_services_dataset(path: Path) -> dict:
+    df = pd.read_excel(path, sheet_name=0, header=[2, 3], engine="openpyxl")
+    columns = list(df.columns)
+    if len(columns) < 25:
+        raise ValueError("Лист 'Калькуляция' имеет неожиданную структуру колонок.")
+
+    number_col = columns[0]
+    class_col = columns[1]
+    service_col = columns[2]
+    direct_total_col = columns[4]
+    indirect_total_col = columns[16]
+    ineff_cols = [columns[22], columns[23], columns[24]]
+
+    direct_top = clean_sub_label(direct_total_col[0])
+    indirect_top = clean_sub_label(indirect_total_col[0])
+    ineff_top = clean_sub_label(ineff_cols[0][0])
+
+    direct_columns = [
+        col
+        for col in columns
+        if isinstance(col, tuple) and clean_sub_label(col[0]) == direct_top
+    ]
+    indirect_columns = [
+        col
+        for col in columns
+        if isinstance(col, tuple) and clean_sub_label(col[0]) == indirect_top
+    ]
+    ineff_columns = [
+        col
+        for col in columns
+        if isinstance(col, tuple) and clean_sub_label(col[0]) == ineff_top
+    ]
+
+    direct_detail_cols = [
+        col
+        for col in direct_columns
+        if col != direct_total_col
+        and "%" not in clean_sub_label(col[1])
+        and not is_unnamed_label(col[1])
+    ]
+    indirect_detail_cols = [
+        col
+        for col in indirect_columns
+        if col != indirect_total_col and not is_unnamed_label(col[1])
+    ]
+    ineff_detail_cols = [col for col in ineff_columns if not is_unnamed_label(col[1])]
+
+    selected_columns = unique_columns([
         number_col,
         class_col,
         service_col,
         direct_total_col,
         indirect_total_col,
-        ineff_rent_col,
-        ineff_prt_rent_col,
-        ineff_rzd_col,
-    ]
+        *ineff_cols,
+        *direct_detail_cols,
+        *indirect_detail_cols,
+        *ineff_detail_cols,
+    ])
     data = df[selected_columns].copy()
     data = data[pd.to_numeric(data[number_col], errors="coerce").notna()]
 
@@ -114,69 +168,99 @@ def load_calculation_services_by_class(path: Path) -> list[dict]:
     data = data[data[service_col] != ""]
     data = data[data[service_col].str.casefold() != "обоснование"]
 
-    numeric_columns = [
+    numeric_columns = unique_columns([
         direct_total_col,
         indirect_total_col,
-        ineff_rent_col,
-        ineff_prt_rent_col,
-        ineff_rzd_col,
-    ]
-    for column in numeric_columns:
-        data[column] = pd.to_numeric(data[column], errors="coerce").fillna(0.0)
+        *ineff_cols,
+        *direct_detail_cols,
+        *indirect_detail_cols,
+        *ineff_detail_cols,
+    ])
+    for col in numeric_columns:
+        data[col] = pd.to_numeric(data[col], errors="coerce").fillna(0.0)
 
-    class_tables = []
+    services = []
+    for _, row in data.iterrows():
+        class_name = str(row[class_col]).strip() or "Без класса"
+        service_name = str(row[service_col]).strip()
 
-    for class_name, group in data.groupby(class_col, sort=False):
-        services = []
-        class_direct_total = 0.0
-        class_indirect_total = 0.0
-        class_inefficiency_total = 0.0
+        direct_total = float(row[direct_total_col])
+        indirect_total_with_ineff = float(row[indirect_total_col])
+        ineff_total = sum(float(row[col]) for col in ineff_cols)
+        indirect_core = indirect_total_with_ineff - ineff_total
+        indirect_sum = indirect_core + ineff_total
+        total_cost = direct_total + indirect_sum
 
-        for _, row in group.iterrows():
-            direct = float(row[direct_total_col])
-            indirect_total = float(row[indirect_total_col])
-            inefficiency = (
-                float(row[ineff_rent_col])
-                + float(row[ineff_prt_rent_col])
-                + float(row[ineff_rzd_col])
-            )
-            indirect = indirect_total - inefficiency
-            indirect_sum = indirect + inefficiency
-            total = direct + indirect_sum
+        direct_details = {
+            clean_sub_label(col[1]): float(row[col]) for col in direct_detail_cols
+        }
+        indirect_details = {
+            clean_sub_label(col[1]): float(row[col]) for col in indirect_detail_cols
+        }
+        inefficiency_details = {
+            clean_sub_label(col[1]): float(row[col]) for col in ineff_detail_cols
+        }
 
-            services.append(
-                {
-                    "service_name": row[service_col],
-                    "direct_cost": direct,
-                    "indirect_cost": indirect,
-                    "inefficiency_cost": inefficiency,
-                    "indirect_sum": indirect_sum,
-                    "total_cost": total,
-                }
-            )
-
-            class_direct_total += direct
-            class_indirect_total += indirect
-            class_inefficiency_total += inefficiency
-
-        class_indirect_sum_total = class_indirect_total + class_inefficiency_total
-
-        class_tables.append(
+        services.append(
             {
                 "class_name": class_name,
-                "services": services,
-                "direct_total": class_direct_total,
-                "indirect_total": class_indirect_total,
-                "inefficiency_total": class_inefficiency_total,
-                "indirect_sum_total": class_indirect_sum_total,
-                "grand_total": class_direct_total + class_indirect_sum_total,
+                "service_name": service_name,
+                "direct_cost": direct_total,
+                "indirect_cost": indirect_core,
+                "inefficiency_cost": ineff_total,
+                "indirect_sum": indirect_sum,
+                "total_cost": total_cost,
+                "direct_details": direct_details,
+                "indirect_details": indirect_details,
+                "inefficiency_details": inefficiency_details,
             }
         )
 
-    return class_tables
+    class_tables = build_class_tables_from_services(services)
+    return {
+        "services": services,
+        "class_tables": class_tables,
+        "direct_detail_labels": [clean_sub_label(col[1]) for col in direct_detail_cols],
+        "indirect_detail_labels": [clean_sub_label(col[1]) for col in indirect_detail_cols],
+        "inefficiency_detail_labels": [clean_sub_label(col[1]) for col in ineff_detail_cols],
+    }
 
 
-def build_dashboard_data(class_tables: list[dict]) -> dict:
+def load_calculation_services_by_class(path: Path) -> list[dict]:
+    return load_calculation_services_dataset(path)["class_tables"]
+
+
+def build_histogram(values: list[float], bins: int = 8) -> dict:
+    if not values:
+        return {"labels": [], "values": []}
+
+    min_value = min(values)
+    max_value = max(values)
+    if max_value == min_value:
+        return {"labels": [f"{min_value:,.0f}".replace(",", " ")], "values": [len(values)]}
+
+    step = (max_value - min_value) / bins
+    edges = [min_value + i * step for i in range(bins + 1)]
+    counts = [0 for _ in range(bins)]
+    for value in values:
+        idx = int((value - min_value) / step)
+        if idx >= bins:
+            idx = bins - 1
+        counts[idx] += 1
+
+    labels = []
+    for idx in range(bins):
+        left = f"{edges[idx]:,.0f}".replace(",", " ")
+        right = f"{edges[idx + 1]:,.0f}".replace(",", " ")
+        labels.append(f"{left}-{right}")
+
+    return {"labels": labels, "values": counts}
+
+
+def build_dashboard_data(dataset: dict) -> dict:
+    class_tables = dataset["class_tables"]
+    services_full = dataset["services"]
+
     total_services = sum(len(group["services"]) for group in class_tables)
     total_classes = len(class_tables)
     direct_total = sum(group["direct_total"] for group in class_tables)
@@ -184,6 +268,7 @@ def build_dashboard_data(class_tables: list[dict]) -> dict:
     inefficiency_total = sum(group["inefficiency_total"] for group in class_tables)
     indirect_sum_total = sum(group["indirect_sum_total"] for group in class_tables)
     grand_total = sum(group["grand_total"] for group in class_tables)
+
     direct_share_of_total = (direct_total / grand_total * 100.0) if grand_total else 0.0
     indirect_share_of_total = (indirect_total / grand_total * 100.0) if grand_total else 0.0
     inefficiency_share_of_total = (
@@ -200,7 +285,6 @@ def build_dashboard_data(class_tables: list[dict]) -> dict:
 
     classes = []
     all_services = []
-
     for group in class_tables:
         share = (group["grand_total"] / grand_total * 100.0) if grand_total else 0.0
         top_service = max(group["services"], key=lambda service: service["total_cost"])
@@ -218,7 +302,6 @@ def build_dashboard_data(class_tables: list[dict]) -> dict:
                 "top_service_total": top_service["total_cost"],
             }
         )
-
         for service in group["services"]:
             all_services.append(
                 {
@@ -232,12 +315,18 @@ def build_dashboard_data(class_tables: list[dict]) -> dict:
                 }
             )
 
-    top_services = sorted(
-        all_services,
-        key=lambda service: service["total_cost"],
-        reverse=True,
-    )[:12]
+    full_lookup = {
+        (row["class_name"], row["service_name"]): row for row in services_full
+    }
+    for service in all_services:
+        source = full_lookup.get((service["class_name"], service["service_name"]))
+        if not source:
+            continue
+        service["direct_details"] = source["direct_details"]
+        service["indirect_details"] = source["indirect_details"]
+        service["inefficiency_details"] = source["inefficiency_details"]
 
+    top_services = sorted(all_services, key=lambda s: s["total_cost"], reverse=True)[:12]
     top_service_names = [service["service_name"] for service in top_services]
     top_service_totals = [service["total_cost"] for service in top_services]
     class_labels = [class_item["name"] for class_item in classes]
@@ -255,16 +344,124 @@ def build_dashboard_data(class_tables: list[dict]) -> dict:
     largest_class_name = "-"
     largest_class_share = 0.0
     if classes:
-        largest_class = max(classes, key=lambda class_item: class_item["grand_total"])
+        largest_class = max(classes, key=lambda item: item["grand_total"])
         largest_class_name = largest_class["name"]
         largest_class_share = largest_class["share"]
 
     largest_service_name = "-"
     largest_service_total = 0.0
     if top_services:
-        largest_service = max(top_services, key=lambda service: service["total_cost"])
+        largest_service = max(top_services, key=lambda item: item["total_cost"])
         largest_service_name = largest_service["service_name"]
         largest_service_total = largest_service["total_cost"]
+
+    classes_sorted = sorted(classes, key=lambda item: item["grand_total"], reverse=True)
+    for class_item in classes_sorted:
+        total = class_item["grand_total"] or 0.0
+        class_item["direct_share"] = (
+            class_item["direct_total"] / total * 100.0 if total else 0.0
+        )
+        class_item["indirect_share"] = (
+            class_item["indirect_total"] / total * 100.0 if total else 0.0
+        )
+        class_item["ineff_share"] = (
+            class_item["inefficiency_total"] / total * 100.0 if total else 0.0
+        )
+        class_item["avg_service_total"] = (
+            class_item["grand_total"] / class_item["services_count"]
+            if class_item["services_count"]
+            else 0.0
+        )
+
+    services_sorted_by_total = sorted(all_services, key=lambda item: item["total_cost"], reverse=True)
+    services_sorted_by_ineff = sorted(
+        all_services, key=lambda item: item["inefficiency_cost"], reverse=True
+    )
+    service_totals = [service["total_cost"] for service in all_services]
+    service_hist = build_histogram(service_totals, bins=8)
+    service_median_total = float(pd.Series(service_totals).median()) if service_totals else 0.0
+    service_p90_total = float(pd.Series(service_totals).quantile(0.9)) if service_totals else 0.0
+    top_service_share = (
+        (largest_service_total / grand_total * 100.0) if grand_total else 0.0
+    )
+    high_ineff_services_count = sum(
+        1
+        for service in all_services
+        if service["total_cost"] and (service["inefficiency_cost"] / service["total_cost"]) >= 0.15
+    )
+
+    direct_components = defaultdict(float)
+    indirect_components = defaultdict(float)
+    ineff_components = defaultdict(float)
+    for service in all_services:
+        for name, value in service.get("direct_details", {}).items():
+            direct_components[name] += float(value)
+        for name, value in service.get("indirect_details", {}).items():
+            indirect_components[name] += float(value)
+        for name, value in service.get("inefficiency_details", {}).items():
+            ineff_components[name] += float(value)
+
+    component_rows = []
+    for name, amount in direct_components.items():
+        component_rows.append({"component": name, "type": "Прямые", "total": amount})
+    for name, amount in indirect_components.items():
+        component_rows.append({"component": name, "type": "Косвенные", "total": amount})
+    for name, amount in ineff_components.items():
+        component_rows.append({"component": name, "type": "Неэффективность", "total": amount})
+    component_rows.sort(key=lambda item: item["total"], reverse=True)
+    for row in component_rows:
+        row["share_of_total"] = (row["total"] / grand_total * 100.0) if grand_total else 0.0
+
+    type_totals = {
+        "Прямые": sum(direct_components.values()),
+        "Косвенные": sum(indirect_components.values()),
+        "Неэффективность": sum(ineff_components.values()),
+    }
+
+    type_breakdowns = {}
+    type_defs = [
+        ("direct", "Прямые", "direct_cost"),
+        ("indirect", "Косвенные", "indirect_cost"),
+        ("ineff", "Неэффективность", "inefficiency_cost"),
+    ]
+    for key, title, service_key in type_defs:
+        components = [row for row in component_rows if row["type"] == title]
+        type_total = type_totals[title]
+        for row in components:
+            row["share_in_type"] = (row["total"] / type_total * 100.0) if type_total else 0.0
+
+        class_values = []
+        for class_item in classes_sorted:
+            class_value = {
+                "Прямые": class_item["direct_total"],
+                "Косвенные": class_item["indirect_total"],
+                "Неэффективность": class_item["inefficiency_total"],
+            }[title]
+            class_values.append({"class_name": class_item["name"], "value": class_value})
+
+        top_services_for_type = sorted(
+            (
+                {
+                    "class_name": service["class_name"],
+                    "service_name": service["service_name"],
+                    "value": service[service_key],
+                }
+                for service in all_services
+            ),
+            key=lambda item: item["value"],
+            reverse=True,
+        )
+
+        type_breakdowns[key] = {
+            "title": title,
+            "total": type_total,
+            "components": components,
+            "component_labels": [item["component"] for item in components[:10]],
+            "component_values": [item["total"] for item in components[:10]],
+            "class_labels": [item["class_name"] for item in class_values],
+            "class_values": [item["value"] for item in class_values],
+            "top_services": [item for item in top_services_for_type if item["value"] > 0][:10],
+        }
 
     return {
         "totals": {
@@ -289,16 +486,8 @@ def build_dashboard_data(class_tables: list[dict]) -> dict:
             "largest_service_total": largest_service_total,
         },
         "charts": {
-            "cost_structure_labels": [
-                "Прямые расходы",
-                "Косвенные расходы",
-                "Неэффективность",
-            ],
-            "cost_structure_values": [
-                direct_total,
-                indirect_total,
-                inefficiency_total,
-            ],
+            "cost_structure_labels": ["Прямые расходы", "Косвенные расходы", "Неэффективность"],
+            "cost_structure_values": [direct_total, indirect_total, inefficiency_total],
             "class_labels": class_labels,
             "class_totals": class_totals,
             "class_direct_values": class_direct_values,
@@ -311,6 +500,39 @@ def build_dashboard_data(class_tables: list[dict]) -> dict:
         "classes": classes,
         "top_services": top_services,
         "class_tables": class_tables,
+        "level2": {
+            "classes_sorted": classes_sorted,
+            "class_labels": [item["name"] for item in classes_sorted],
+            "class_totals": [item["grand_total"] for item in classes_sorted],
+            "class_ineff_shares": [item["ineff_share"] for item in classes_sorted],
+            "top2_share": sum(item["share"] for item in classes_sorted[:2]) if classes_sorted else 0.0,
+            "avg_class_total": (grand_total / total_classes) if total_classes else 0.0,
+        },
+        "level3": {
+            "service_count": len(all_services),
+            "service_median_total": service_median_total,
+            "service_p90_total": service_p90_total,
+            "top_service_share": top_service_share,
+            "high_ineff_services_count": high_ineff_services_count,
+            "top_total_labels": [item["service_name"] for item in services_sorted_by_total[:15]],
+            "top_total_values": [item["total_cost"] for item in services_sorted_by_total[:15]],
+            "top_ineff_labels": [item["service_name"] for item in services_sorted_by_ineff[:15]],
+            "top_ineff_values": [item["inefficiency_cost"] for item in services_sorted_by_ineff[:15]],
+            "hist_labels": service_hist["labels"],
+            "hist_values": service_hist["values"],
+            "services_sorted": services_sorted_by_total,
+        },
+        "level4": {
+            "component_rows": component_rows,
+            "components_count": len(component_rows),
+            "top_component_name": component_rows[0]["component"] if component_rows else "-",
+            "top_component_value": component_rows[0]["total"] if component_rows else 0.0,
+            "component_labels": [item["component"] for item in component_rows[:12]],
+            "component_values": [item["total"] for item in component_rows[:12]],
+            "type_labels": list(type_totals.keys()),
+            "type_values": list(type_totals.values()),
+        },
+        "level5": type_breakdowns,
     }
 
 
@@ -322,11 +544,7 @@ def index():
 @app.route("/excel-debug")
 def excel_debug():
     if not EXCEL_PATH.exists():
-        return render_template(
-            "excel_debug.html",
-            error=f"Файл не найден: {EXCEL_PATH}",
-            sheets=[],
-        )
+        return render_template("excel_debug.html", error=f"Файл не найден: {EXCEL_PATH}", sheets=[])
 
     sheets = load_workbook_sheets(EXCEL_PATH)
     return render_template("excel_debug.html", error=None, sheets=sheets)
@@ -366,13 +584,9 @@ def dashboard():
         )
 
     try:
-        class_tables = load_calculation_services_by_class(EXCEL_PATH)
-        dashboard_data = build_dashboard_data(class_tables)
-        return render_template(
-            "dashboard.html",
-            error=None,
-            dashboard=dashboard_data,
-        )
+        dataset = load_calculation_services_dataset(EXCEL_PATH)
+        dashboard_data = build_dashboard_data(dataset)
+        return render_template("dashboard.html", error=None, dashboard=dashboard_data)
     except Exception as exc:
         return render_template(
             "dashboard.html",
