@@ -313,10 +313,6 @@
               <div class="canvas-wrap"><canvas id="classSharePie"></canvas></div>
             </article>
             <article class="chart">
-              <h3><svg><use href="#i-bars"></use></svg>Итого по классам (bar)</h3>
-              <div class="canvas-wrap"><canvas id="classTotalsBar"></canvas></div>
-            </article>
-            <article class="chart">
               <h3><svg><use href="#i-stack"></use></svg>Состав затрат по классам (stacked)</h3>
               <div class="canvas-wrap"><canvas id="classStackBar"></canvas></div>
             </article>
@@ -698,7 +694,6 @@
         const costPct = costAbs.map((v) => t.total ? (v / t.total) * 100 : 0);
         charts.cost = pie("costStructurePie", ["Прямые","Косвенные","Неэффективность"], state.mode === "percent" ? costPct : costAbs);
         charts.classPie = pie("classSharePie", clsLabels, state.mode === "percent" ? clsShares : clsTotals);
-        charts.classBar = bar("classTotalsBar", clsLabels, state.mode === "percent" ? clsShares : clsTotals, false, "#3e7cb1", "Итого по классу");
 
         const d = state.mode === "percent" ? cls.map((x) => x.total ? (x.direct / x.total) * 100 : 0) : cls.map((x) => x.direct);
         const i = state.mode === "percent" ? cls.map((x) => x.total ? (x.indirect / x.total) * 100 : 0) : cls.map((x) => x.indirect);
