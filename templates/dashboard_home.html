@@ -62,17 +62,19 @@
             <th class="sortable" data-sort-type="number">Услуг</th>
             <th class="sortable" data-sort-type="number">Итого</th>
             <th class="sortable" data-sort-type="number">Доля</th>
-            <th>Переход</th>
           </tr>
         </thead>
         <tbody>
           {% for class_row in navigation.class_rows %}
           <tr>
-            <td>{{ class_row.name }}</td>
+            <td>
+              <a class="name-link" href="{{ url_for('dashboard_class', class_name=class_row.name) }}">
+                {{ class_row.name }}
+              </a>
+            </td>
             <td class="num">{{ class_row.services_count }}</td>
             <td class="num">{{ class_row.totals.total | money }}</td>
             <td class="num">{{ class_row.share | pct }}</td>
-            <td><a class="link-btn" href="{{ url_for('dashboard_class', class_name=class_row.name) }}">Открыть</a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -89,20 +91,22 @@
             <th class="sortable" data-sort-type="text">Класс</th>
             <th class="sortable" data-sort-type="text">Услуга</th>
             <th class="sortable" data-sort-type="number">Сумма</th>
-            <th>Переход</th>
           </tr>
         </thead>
         <tbody>
           {% for service in navigation.services[:40] %}
           <tr>
-            <td>{{ service.class_name }}</td>
-            <td>{{ service.service_name }}</td>
-            <td class="num">{{ service.total_cost | money }}</td>
             <td>
-              <a class="link-btn" href="{{ url_for('dashboard_service', class_name=service.class_name, service_name=service.service_name) }}">
-                Открыть
+              <a class="name-link" href="{{ url_for('dashboard_class', class_name=service.class_name) }}">
+                {{ service.class_name }}
               </a>
             </td>
+            <td>
+              <a class="name-link" href="{{ url_for('dashboard_service', class_name=service.class_name, service_name=service.service_name) }}">
+                {{ service.service_name }}
+              </a>
+            </td>
+            <td class="num">{{ service.total_cost | money }}</td>
           </tr>
           {% endfor %}
         </tbody>

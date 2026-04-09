@@ -28,10 +28,11 @@
   <div class="tag-grid">
     {% for card in cost_cards %}
     <div class="tag-card" style="border-color: {{ card.color }}66">
-      <h4>{{ card.title }}</h4>
+      <h4>
+        <a class="name-link" href="{{ card.href }}">{{ card.title }}</a>
+      </h4>
       <p class="sum">{{ card.amount | money }}</p>
       <p class="pct">Доля в услуге: {{ card.share | pct }}</p>
-      <a class="link-btn" href="{{ card.href }}" style="margin-top:6px">Открыть детализацию</a>
     </div>
     {% endfor %}
   </div>
