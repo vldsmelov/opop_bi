@@ -46,23 +46,21 @@
           <th class="sortable" data-sort-type="number">Неэффективность</th>
           <th class="sortable" data-sort-type="number">Сумма</th>
           <th class="sortable" data-sort-type="number">Доля в классе</th>
-          <th>Переход</th>
         </tr>
       </thead>
       <tbody>
         {% for service in class_row.services %}
         <tr>
-          <td>{{ service.service_name }}</td>
+          <td>
+            <a class="name-link" href="{{ url_for('dashboard_service', class_name=class_row.name, service_name=service.service_name) }}">
+              {{ service.service_name }}
+            </a>
+          </td>
           <td class="num">{{ service.direct_cost | money }}</td>
           <td class="num">{{ service.indirect_cost | money }}</td>
           <td class="num">{{ service.inefficiency_cost | money }}</td>
           <td class="num">{{ service.total_cost | money }}</td>
           <td class="num">{{ (service.total_cost / class_row.totals.total * 100) | pct if class_row.totals.total else "0,0%" }}</td>
-          <td>
-            <a class="link-btn" href="{{ url_for('dashboard_service', class_name=class_row.name, service_name=service.service_name) }}">
-              Открыть услугу
-            </a>
-          </td>
         </tr>
         {% endfor %}
       </tbody>
