@@ -171,7 +171,7 @@
       </section>
 
       <section class="card">
-        <h2>Топ услуг по стоимости (bar)</h2>
+        <h2>Топ услуг по стоимости: Прямые, Косвенные, Неэффективность</h2>
         <article class="chart">
           <div id="topServicesWrap" class="canvas-wrap top-chart-wrap"><canvas id="topServicesBar"></canvas></div>
         </article>
@@ -385,6 +385,33 @@
         });
       }
 
+      function stackedHorizontal(id, labels, d, i, f) {
+        return new Chart(document.getElementById(id), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              { label: "Прямые", data: d, backgroundColor: "#1f6f66" },
+              { label: "Косвенные", data: i, backgroundColor: "#3e7cb1" },
+              { label: "Неэффективность", data: f, backgroundColor: "#d47d2f" },
+            ],
+          },
+          options: {
+            maintainAspectRatio: false,
+            indexAxis: "y",
+            scales: {
+              x: {
+                stacked: true,
+                suggestedMax: state.mode === "percent" ? 100 : undefined,
+                ticks: { callback: (v) => state.mode === "percent" ? pct(v) : money(v) },
+              },
+              y: { stacked: true },
+            },
+            plugins: { legend: { position: "bottom" } },
+          },
+        });
+      }
+
       function setTopChartHeight(serviceCount) {
         const height = Math.max(360, serviceCount * 28 + 120);
         el.topChartWrap.style.height = `${height}px`;
@@ -410,9 +437,11 @@
 
         const top = [...services].sort((a, b) => b.total_cost - a.total_cost);
         const topLabels = top.map((x) => x.service_name);
-        const topValues = state.mode === "percent" ? top.map((x) => t.total ? (x.total_cost / t.total) * 100 : 0) : top.map((x) => x.total_cost);
+        const topDirect = state.mode === "percent" ? top.map((x) => x.total_cost ? (x.direct_cost / x.total_cost) * 100 : 0) : top.map((x) => x.direct_cost);
+        const topIndirect = state.mode === "percent" ? top.map((x) => x.total_cost ? (x.indirect_cost / x.total_cost) * 100 : 0) : top.map((x) => x.indirect_cost);
+        const topIneff = state.mode === "percent" ? top.map((x) => x.total_cost ? (x.inefficiency_cost / x.total_cost) * 100 : 0) : top.map((x) => x.inefficiency_cost);
         setTopChartHeight(top.length);
-        charts.top = bar("topServicesBar", topLabels, topValues, true, "#1f6f66", "Топ услуг");
+        charts.top = stackedHorizontal("topServicesBar", topLabels, topDirect, topIndirect, topIneff);
       }
 
       function setMode(mode) {
