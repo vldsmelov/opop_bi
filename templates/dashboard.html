@@ -149,7 +149,7 @@
       .canvas-wrap { min-height:280px; }
       .top-chart-wrap { min-height:360px; }
       .table-toolbar { display:grid; gap:10px; margin:8px 0 12px; }
-      .table-filters { display:grid; gap:10px; grid-template-columns:repeat(4,minmax(160px,1fr)); }
+      .table-filters { display:grid; gap:10px; grid-template-columns:minmax(220px,420px); }
       .table-control { display:grid; gap:6px; }
       .table-control label { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
       .table-control label svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2; }
@@ -177,13 +177,15 @@
         top:0;
         z-index:2;
       }
+      th.sortable-th { cursor:pointer; user-select:none; white-space:nowrap; }
+      th.sortable-th .sort-mark { margin-left:6px; color:#4d6f89; font-size:12px; }
+      th.sortable-th.active { background:#e4f0fb; color:#0f3b5d; }
       tbody tr:nth-child(even) { background:#fbfdff; }
       td.num { text-align:right; white-space:nowrap; }
       .error { border:1px solid #f2c6c6; background:#fff1f1; color:#8b2020; border-radius:10px; padding:10px; }
       @media (max-width:1100px) {
         .metrics { grid-template-columns:repeat(3,minmax(130px,1fr)); }
         .layout-grid,.controls,.summary,.charts { grid-template-columns:1fr; }
-        .table-filters { grid-template-columns:repeat(2,minmax(160px,1fr)); }
       }
       @media (max-width:700px) {
         .wrap { padding:14px 12px; }
@@ -203,9 +205,6 @@
       <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h6M14 6h6M10 6v6M4 18h10M18 18h2M14 18v-6"/></symbol>
       <symbol id="i-percent" viewBox="0 0 24 24"><path d="m5 19 14-14"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></symbol>
       <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></symbol>
-      <symbol id="i-sort" viewBox="0 0 24 24"><path d="M7 5v14M7 19l-3-3M7 19l3-3M17 19V5M17 5l-3 3M17 5l3 3"/></symbol>
-      <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 5v14M6 11l6-6 6 6"/></symbol>
-      <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 19V5M6 13l6 6 6-6"/></symbol>
       <symbol id="i-pie" viewBox="0 0 24 24"><path d="M12 3v9h9"/><path d="M21 12a9 9 0 1 1-9-9"/></symbol>
       <symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20V9M12 20V4M19 20v-7"/></symbol>
       <symbol id="i-stack" viewBox="0 0 24 24"><path d="m4 8 8-4 8 4-8 4-8-4zM4 12l8 4 8-4M4 16l8 4 8-4"/></symbol>
@@ -340,32 +339,6 @@
               <label for="tableServiceFilter"><svg><use href="#i-search"></use></svg>Фильтр по услуге</label>
               <input id="tableServiceFilter" type="text" placeholder="Введите часть названия услуги" />
             </div>
-            <div class="table-control">
-              <label for="tableClassFilter"><svg><use href="#i-filter"></use></svg>Фильтр по классу</label>
-              <select id="tableClassFilter">
-                <option value="">Все классы</option>
-                {% for class_item in dashboard.classes %}
-                <option value="{{ class_item.name }}">{{ class_item.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="table-control">
-              <label for="tableSortKey"><svg><use href="#i-sort"></use></svg>Сортировка</label>
-              <select id="tableSortKey">
-                <option value="total_cost">Сумма</option>
-                <option value="share">Доля в срезе</option>
-                <option value="service_name">Услуга</option>
-                <option value="class_name">Класс</option>
-                <option value="direct_cost">Прямые</option>
-                <option value="indirect_cost">Косвенные</option>
-                <option value="inefficiency_cost">Неэффективность</option>
-                <option value="indirect_sum">Косвенные сумма</option>
-              </select>
-            </div>
-            <div class="table-control">
-              <label><svg><use href="#i-sort"></use></svg>Порядок</label>
-              <button id="tableSortDir" type="button" class="mode-btn"><svg><use href="#i-arrow-down"></use></svg>По убыванию</button>
-            </div>
           </div>
           <div class="table-meta">Показано строк: <strong id="tableRowsCount">0</strong></div>
         </div>
@@ -373,14 +346,14 @@
           <table>
             <thead>
               <tr>
-                <th>Класс</th>
-                <th>Услуга</th>
-                <th>Прямые</th>
-                <th>Косвенные</th>
-                <th>Неэффективность</th>
-                <th>Косвенные сумма</th>
-                <th>Сумма</th>
-                <th>Доля в срезе</th>
+                <th class="sortable-th" data-sort-key="class_name">Класс<span class="sort-mark">↕</span></th>
+                <th class="sortable-th" data-sort-key="service_name">Услуга<span class="sort-mark">↕</span></th>
+                <th class="sortable-th" data-sort-key="direct_cost">Прямые<span class="sort-mark">↕</span></th>
+                <th class="sortable-th" data-sort-key="indirect_cost">Косвенные<span class="sort-mark">↕</span></th>
+                <th class="sortable-th" data-sort-key="inefficiency_cost">Неэффективность<span class="sort-mark">↕</span></th>
+                <th class="sortable-th" data-sort-key="indirect_sum">Косвенные сумма<span class="sort-mark">↕</span></th>
+                <th class="sortable-th" data-sort-key="total_cost">Сумма<span class="sort-mark">↕</span></th>
+                <th class="sortable-th" data-sort-key="share">Доля в срезе<span class="sort-mark">↕</span></th>
               </tr>
             </thead>
             <tbody id="topServicesTableBody"></tbody>
@@ -402,7 +375,6 @@
         selectedService: null,
         activeClasses: new Set(),
         tableQuery: "",
-        tableClass: "",
         tableSortKey: "total_cost",
         tableSortDir: "desc",
       };
@@ -422,11 +394,9 @@
         total: document.getElementById("sliceTotal"),
         di: document.getElementById("sliceDirectIndirect"),
         ineff: document.getElementById("sliceInefficiency"),
+        tableHeaders: Array.from(document.querySelectorAll("th.sortable-th")),
         tableBody: document.getElementById("topServicesTableBody"),
         tableServiceFilter: document.getElementById("tableServiceFilter"),
-        tableClassFilter: document.getElementById("tableClassFilter"),
-        tableSortKey: document.getElementById("tableSortKey"),
-        tableSortDir: document.getElementById("tableSortDir"),
         tableRowsCount: document.getElementById("tableRowsCount"),
         topChartWrap: document.getElementById("topServicesWrap"),
       };
@@ -527,11 +497,17 @@
         el.ineff.textContent = `${money(t.ineff)} (${pct(t.total ? (t.ineff / t.total) * 100 : 0)})`;
       }
 
-      function updateTableSortDirButton() {
-        const isAsc = state.tableSortDir === "asc";
-        el.tableSortDir.innerHTML = isAsc
-          ? '<svg><use href="#i-arrow-up"></use></svg>По возрастанию'
-          : '<svg><use href="#i-arrow-down"></use></svg>По убыванию';
+      function updateTableHeaderSortVisuals() {
+        for (const th of el.tableHeaders) {
+          const key = th.dataset.sortKey;
+          const mark = th.querySelector(".sort-mark");
+          const active = state.tableSortKey === key;
+          th.classList.toggle("active", active);
+          th.setAttribute("aria-sort", active ? (state.tableSortDir === "asc" ? "ascending" : "descending") : "none");
+          if (mark) {
+            mark.textContent = active ? (state.tableSortDir === "asc" ? "↑" : "↓") : "↕";
+          }
+        }
       }
 
       function compareText(a, b) {
@@ -551,10 +527,6 @@
             s.service_name.toLowerCase().includes(query) ||
             s.class_name.toLowerCase().includes(query)
           );
-        }
-
-        if (state.tableClass) {
-          rows = rows.filter((s) => s.class_name === state.tableClass);
         }
 
         const dir = state.tableSortDir === "asc" ? 1 : -1;
@@ -595,6 +567,7 @@
       function renderTable(services, t) {
         const rows = applyTableFiltersAndSort(services, t);
         el.tableRowsCount.textContent = rows.length;
+        updateTableHeaderSortVisuals();
 
         if (!rows.length) {
           el.tableBody.innerHTML = '<tr><td colspan="8">Нет данных под текущий фильтр.</td></tr>';
@@ -803,19 +776,19 @@
         state.tableQuery = el.tableServiceFilter.value;
         renderTableOnly();
       });
-      el.tableClassFilter.addEventListener("change", () => {
-        state.tableClass = el.tableClassFilter.value;
-        renderTableOnly();
-      });
-      el.tableSortKey.addEventListener("change", () => {
-        state.tableSortKey = el.tableSortKey.value;
-        renderTableOnly();
-      });
-      el.tableSortDir.addEventListener("click", () => {
-        state.tableSortDir = state.tableSortDir === "asc" ? "desc" : "asc";
-        updateTableSortDirButton();
-        renderTableOnly();
-      });
+      for (const th of el.tableHeaders) {
+        th.addEventListener("click", () => {
+          const key = th.dataset.sortKey;
+          if (!key) return;
+          if (state.tableSortKey === key) {
+            state.tableSortDir = state.tableSortDir === "asc" ? "desc" : "asc";
+          } else {
+            state.tableSortKey = key;
+            state.tableSortDir = "desc";
+          }
+          renderTableOnly();
+        });
+      }
       el.modeAbs.addEventListener("click", () => setMode("absolute"));
       el.modePct.addEventListener("click", () => setMode("percent"));
       el.reset.addEventListener("click", () => {
@@ -823,22 +796,16 @@
         el.searchFilter.value = "";
         state.selectedService = null;
         state.tableQuery = "";
-        state.tableClass = "";
         state.tableSortKey = "total_cost";
         state.tableSortDir = "desc";
         el.tableServiceFilter.value = "";
-        el.tableClassFilter.value = "";
-        el.tableSortKey.value = state.tableSortKey;
         updateClassToggleVisuals();
         updateSearchStatus("", "Фильтр услуги не выбран.");
         updateClearSearchState();
-        updateTableSortDirButton();
         setMode("absolute");
       });
 
       fillServiceDatalist();
-      el.tableSortKey.value = state.tableSortKey;
-      updateTableSortDirButton();
       updateClassToggleVisuals();
       syncServiceSelectionFromInput();
       render();
