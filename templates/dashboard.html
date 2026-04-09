@@ -136,6 +136,8 @@
       .summary strong { color:var(--ink); }
       .summary-label { display:inline-flex; align-items:center; gap:7px; }
       .summary-label svg { width:14px; height:14px; stroke:var(--blue); fill:none; stroke-width:2; }
+      .section-note { color:var(--muted); margin:2px 0 10px; }
+      .level-metrics { grid-template-columns:repeat(4,minmax(140px,1fr)); }
       .charts { display:grid; gap:10px; grid-template-columns:repeat(2,minmax(220px,1fr)); }
       .chart {
         border:1px solid var(--line);
@@ -183,10 +185,13 @@
       th.sortable-th.active { background:#e4f0fb; color:#0f3b5d; }
       tbody tr:nth-child(even) { background:#fbfdff; }
       td.num { text-align:right; white-space:nowrap; }
+      .mini-grid { display:grid; gap:10px; grid-template-columns:repeat(2,minmax(240px,1fr)); margin-top:10px; }
+      .type-block { margin-top:10px; }
       .error { border:1px solid #f2c6c6; background:#fff1f1; color:#8b2020; border-radius:10px; padding:10px; }
       @media (max-width:1100px) {
         .metrics { grid-template-columns:repeat(3,minmax(130px,1fr)); }
         .layout-grid,.controls,.summary,.charts { grid-template-columns:1fr; }
+        .mini-grid,.level-metrics { grid-template-columns:1fr; }
       }
       @media (max-width:700px) {
         .wrap { padding:14px 12px; }
@@ -357,6 +362,199 @@
           </table>
         </div>
       </section>
+
+      <section class="card" id="level-2">
+        <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-filter"></use></svg></span>Уровень 2: Дашборд По Классам</h2>
+        <p class="section-note">Фокус: вклад каждого класса в итоговый финансовый результат и концентрация рисков.</p>
+        <div class="metrics level-metrics">
+          <div class="metric">
+            <div class="metric-head"><div class="k">Классов</div><span class="icon-chip"><svg><use href="#i-filter"></use></svg></span></div>
+            <div class="v">{{ dashboard.totals.total_classes }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Топ-2 Доля</div><span class="icon-chip"><svg><use href="#i-pie"></use></svg></span></div>
+            <div class="v">{{ dashboard.level2.top2_share | pct }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Средний Класс</div><span class="icon-chip"><svg><use href="#i-bars"></use></svg></span></div>
+            <div class="v">{{ dashboard.level2.avg_class_total | money }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Крупнейший Класс</div><span class="icon-chip"><svg><use href="#i-stack"></use></svg></span></div>
+            <div class="v">{{ dashboard.totals.largest_class_name }}</div>
+          </div>
+        </div>
+        <div class="charts">
+          <article class="chart">
+            <h3><svg><use href="#i-bars"></use></svg>Итого По Классам (bar)</h3>
+            <div class="canvas-wrap"><canvas id="lvl2ClassTotalsBar"></canvas></div>
+          </article>
+          <article class="chart">
+            <h3><svg><use href="#i-percent"></use></svg>Неэффективность По Классам (%)</h3>
+            <div class="canvas-wrap"><canvas id="lvl2IneffShareBar"></canvas></div>
+          </article>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Класс</th>
+                <th>Услуг</th>
+                <th>Прямые</th>
+                <th>Косвенные</th>
+                <th>Неэффективность</th>
+                <th>Сумма</th>
+                <th>Доля</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in dashboard.level2.classes_sorted %}
+              <tr>
+                <td>{{ row.name }}</td>
+                <td class="num">{{ row.services_count }}</td>
+                <td class="num">{{ row.direct_total | money }}</td>
+                <td class="num">{{ row.indirect_total | money }}</td>
+                <td class="num">{{ row.inefficiency_total | money }}</td>
+                <td class="num">{{ row.grand_total | money }}</td>
+                <td class="num">{{ row.share | pct }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" id="level-3">
+        <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-table"></use></svg></span>Уровень 3: Дашборд По Услугам</h2>
+        <p class="section-note">Фокус: структура портфеля услуг, медианные значения и концентрация неэффективности.</p>
+        <div class="metrics level-metrics">
+          <div class="metric">
+            <div class="metric-head"><div class="k">Услуг</div><span class="icon-chip"><svg><use href="#i-dot"></use></svg></span></div>
+            <div class="v">{{ dashboard.level3.service_count }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Медиана Суммы</div><span class="icon-chip"><svg><use href="#i-bars"></use></svg></span></div>
+            <div class="v">{{ dashboard.level3.service_median_total | money }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">P90 Суммы</div><span class="icon-chip"><svg><use href="#i-percent"></use></svg></span></div>
+            <div class="v">{{ dashboard.level3.service_p90_total | money }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Топ-Услуга Доля</div><span class="icon-chip"><svg><use href="#i-pie"></use></svg></span></div>
+            <div class="v">{{ dashboard.level3.top_service_share | pct }}</div>
+          </div>
+        </div>
+        <div class="charts">
+          <article class="chart">
+            <h3><svg><use href="#i-bars"></use></svg>Топ Услуг По Сумме</h3>
+            <div class="canvas-wrap"><canvas id="lvl3TopTotalBar"></canvas></div>
+          </article>
+          <article class="chart">
+            <h3><svg><use href="#i-bars"></use></svg>Топ Услуг По Неэффективности</h3>
+            <div class="canvas-wrap"><canvas id="lvl3TopIneffBar"></canvas></div>
+          </article>
+          <article class="chart wide">
+            <h3><svg><use href="#i-table"></use></svg>Распределение Сумм Услуг (гистограмма)</h3>
+            <div class="canvas-wrap"><canvas id="lvl3ServiceHistBar"></canvas></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="card" id="level-4">
+        <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-stack"></use></svg></span>Уровень 4: Дашборд По Затратам</h2>
+        <p class="section-note">Фокус: детализация по статьям затрат и управленческий приоритет затратных статей.</p>
+        <div class="metrics level-metrics">
+          <div class="metric">
+            <div class="metric-head"><div class="k">Статей Затрат</div><span class="icon-chip"><svg><use href="#i-table"></use></svg></span></div>
+            <div class="v">{{ dashboard.level4.components_count }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Топ Статья</div><span class="icon-chip"><svg><use href="#i-filter"></use></svg></span></div>
+            <div class="v">{{ dashboard.level4.top_component_name }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Топ Статья Сумма</div><span class="icon-chip"><svg><use href="#i-bars"></use></svg></span></div>
+            <div class="v">{{ dashboard.level4.top_component_value | money }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-head"><div class="k">Уровень Риска</div><span class="icon-chip"><svg><use href="#i-reset"></use></svg></span></div>
+            <div class="v">{{ dashboard.totals.risk_level }}</div>
+          </div>
+        </div>
+        <div class="charts">
+          <article class="chart">
+            <h3><svg><use href="#i-bars"></use></svg>Топ Статей Затрат</h3>
+            <div class="canvas-wrap"><canvas id="lvl4ComponentBar"></canvas></div>
+          </article>
+          <article class="chart">
+            <h3><svg><use href="#i-pie"></use></svg>Распределение По Типам Затрат</h3>
+            <div class="canvas-wrap"><canvas id="lvl4TypePie"></canvas></div>
+          </article>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Тип</th>
+                <th>Статья</th>
+                <th>Сумма</th>
+                <th>Доля В Общей Сумме</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in dashboard.level4.component_rows %}
+              <tr>
+                <td>{{ row.type }}</td>
+                <td>{{ row.component }}</td>
+                <td class="num">{{ row.total | money }}</td>
+                <td class="num">{{ row.share_of_total | pct }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" id="level-5">
+        <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-stack"></use></svg></span>Уровень 5: По Каждому Виду Затрат</h2>
+        <p class="section-note">Фокус: отдельный контур для Прямых, Косвенных и Неэффективности.</p>
+        {% for cost_key, cost_data in dashboard.level5.items() %}
+        <article class="chart wide type-block">
+          <h3><svg><use href="#i-table"></use></svg>{{ cost_data.title }}: Компоненты, Классы, Топ Услуг</h3>
+          <div class="mini-grid">
+            <div class="chart">
+              <h3><svg><use href="#i-bars"></use></svg>Компоненты {{ cost_data.title }}</h3>
+              <div class="canvas-wrap"><canvas id="lvl5-{{ cost_key }}-components"></canvas></div>
+            </div>
+            <div class="chart">
+              <h3><svg><use href="#i-bars"></use></svg>Классы {{ cost_data.title }}</h3>
+              <div class="canvas-wrap"><canvas id="lvl5-{{ cost_key }}-classes"></canvas></div>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Класс</th>
+                  <th>Услуга</th>
+                  <th>Значение</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for service in cost_data.top_services %}
+                <tr>
+                  <td>{{ service.class_name }}</td>
+                  <td>{{ service.service_name }}</td>
+                  <td class="num">{{ service.value | money }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+        {% endfor %}
+      </section>
       {% endif %}
     </div>
 
@@ -364,6 +562,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script>
       const allServices = {{ dashboard.all_services | tojson }};
+      const level2 = {{ dashboard.level2 | tojson }};
+      const level3 = {{ dashboard.level3 | tojson }};
+      const level4 = {{ dashboard.level4 | tojson }};
+      const level5 = {{ dashboard.level5 | tojson }};
       const fmtMoney = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const fmtPct = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const palette = ["#1f6f66","#d47d2f","#3e7cb1","#a64b5a","#5e8c31","#6c63a8","#2f9d8f","#7a4f80"];
@@ -376,6 +578,7 @@
         tableSortDir: "desc",
       };
       const charts = {};
+      const staticCharts = {};
 
       const el = {
         classTogglesWrap: document.getElementById("classToggles"),
@@ -679,6 +882,129 @@
         });
       }
 
+      function destroyStaticCharts() {
+        Object.values(staticCharts).forEach((chart) => chart && chart.destroy && chart.destroy());
+      }
+
+      function formatByType(value, type) {
+        if (type === "percent") return pct(value);
+        if (type === "count") return `${Math.round(value || 0)}`;
+        return money(value);
+      }
+
+      function barStatic(id, labels, values, config = {}) {
+        const {
+          horizontal = false,
+          color = "#3e7cb1",
+          label = "Значение",
+          valueType = "money",
+        } = config;
+        const elCanvas = document.getElementById(id);
+        if (!elCanvas) return null;
+
+        return new Chart(elCanvas, {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [{ label, data: values, backgroundColor: color, borderRadius: 8 }],
+          },
+          options: {
+            maintainAspectRatio: false,
+            indexAxis: horizontal ? "y" : "x",
+            scales: horizontal
+              ? { x: { ticks: { callback: (v) => formatByType(v, valueType) } } }
+              : { y: { ticks: { callback: (v) => formatByType(v, valueType) } } },
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatByType(ctx.parsed[horizontal ? "x" : "y"], valueType)}` } },
+            },
+          },
+        });
+      }
+
+      function pieStatic(id, labels, values, valueType = "money") {
+        const elCanvas = document.getElementById(id);
+        if (!elCanvas) return null;
+        return new Chart(elCanvas, {
+          type: "pie",
+          data: {
+            labels,
+            datasets: [{ data: values, backgroundColor: labels.map((_, i) => palette[i % palette.length]), borderColor: "#fff", borderWidth: 2 }],
+          },
+          options: {
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${formatByType(ctx.parsed, valueType)}` } },
+            },
+          },
+        });
+      }
+
+      function drawStaticLevelCharts() {
+        destroyStaticCharts();
+
+        staticCharts.lvl2Totals = barStatic(
+          "lvl2ClassTotalsBar",
+          level2.class_labels,
+          level2.class_totals,
+          { horizontal: true, color: "#2f7f73", label: "Итого по классу", valueType: "money" }
+        );
+        staticCharts.lvl2Ineff = barStatic(
+          "lvl2IneffShareBar",
+          level2.class_labels,
+          level2.class_ineff_shares,
+          { horizontal: true, color: "#d47d2f", label: "Неэффективность, %", valueType: "percent" }
+        );
+
+        staticCharts.lvl3TopTotal = barStatic(
+          "lvl3TopTotalBar",
+          level3.top_total_labels,
+          level3.top_total_values,
+          { horizontal: true, color: "#1f6f66", label: "Сумма услуги", valueType: "money" }
+        );
+        staticCharts.lvl3TopIneff = barStatic(
+          "lvl3TopIneffBar",
+          level3.top_ineff_labels,
+          level3.top_ineff_values,
+          { horizontal: true, color: "#d47d2f", label: "Неэффективность", valueType: "money" }
+        );
+        staticCharts.lvl3Hist = barStatic(
+          "lvl3ServiceHistBar",
+          level3.hist_labels,
+          level3.hist_values,
+          { horizontal: false, color: "#3e7cb1", label: "Количество услуг", valueType: "count" }
+        );
+
+        staticCharts.lvl4Components = barStatic(
+          "lvl4ComponentBar",
+          level4.component_labels,
+          level4.component_values,
+          { horizontal: true, color: "#3e7cb1", label: "Сумма статьи", valueType: "money" }
+        );
+        staticCharts.lvl4TypePie = pieStatic(
+          "lvl4TypePie",
+          level4.type_labels,
+          level4.type_values,
+          "money"
+        );
+
+        for (const [costKey, costData] of Object.entries(level5)) {
+          staticCharts[`lvl5Comp_${costKey}`] = barStatic(
+            `lvl5-${costKey}-components`,
+            costData.component_labels,
+            costData.component_values,
+            { horizontal: true, color: "#2f7f73", label: `${costData.title}: статья`, valueType: "money" }
+          );
+          staticCharts[`lvl5Class_${costKey}`] = barStatic(
+            `lvl5-${costKey}-classes`,
+            costData.class_labels,
+            costData.class_values,
+            { horizontal: true, color: "#3e7cb1", label: `${costData.title}: класс`, valueType: "money" }
+          );
+        }
+      }
+
       function setTopChartHeight(serviceCount) {
         const height = Math.max(360, serviceCount * 28 + 120);
         el.topChartWrap.style.height = `${height}px`;
@@ -805,6 +1131,7 @@
       updateClassToggleVisuals();
       syncServiceSelectionFromInput();
       render();
+      drawStaticLevelCharts();
     </script>
     {% endif %}
   </body>
