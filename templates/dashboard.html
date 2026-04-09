@@ -23,8 +23,31 @@
       .metric .v { font-size:22px; font-weight:800; margin-top:6px; }
       .controls { display:grid; gap:10px; grid-template-columns:repeat(4,minmax(150px,1fr)); }
       .control { display:grid; gap:5px; }
+      .control-wide { grid-column: span 2; }
       .control label { font-size:12px; color:var(--muted); }
       input,select,button { border:1px solid #cfdbe9; border-radius:9px; padding:8px 10px; font:inherit; }
+      .class-toggles { display:flex; gap:8px; flex-wrap:wrap; }
+      .class-toggle-btn {
+        border:1px solid #cfdbe9;
+        border-radius:999px;
+        padding:6px 11px;
+        cursor:pointer;
+        background:#f5f8fc;
+        color:#154b78;
+        font-weight:700;
+      }
+      .class-toggle-btn.active {
+        background:#dff0ff;
+        border-color:#98bee2;
+      }
+      .class-toggle-btn.inactive {
+        background:#f7f8fa;
+        border-color:#dee4ec;
+        color:#7b8794;
+      }
+      .search-status { font-size:12px; color:var(--muted); min-height:16px; }
+      .search-status.warn { color:#9a5f00; }
+      .search-status.ok { color:#1f6f66; }
       .mode { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; align-items:center; }
       .mode b { color:var(--muted); font-size:13px; }
       .mode-btn { background:#f4f8fc; color:#0e416e; font-weight:700; cursor:pointer; }
@@ -45,6 +68,7 @@
       @media (max-width:1100px) {
         .metrics { grid-template-columns:repeat(3,minmax(130px,1fr)); }
         .controls,.summary,.charts { grid-template-columns:1fr; }
+        .control-wide { grid-column: span 1; }
       }
       @media (max-width:700px) { .metrics { grid-template-columns:repeat(2,minmax(130px,1fr)); } }
     </style>
@@ -81,18 +105,27 @@
       <section class="card">
         <h2>Фильтры И Режим</h2>
         <div class="controls">
-          <div class="control">
-            <label for="classFilter">Класс</label>
-            <select id="classFilter">
-              <option value="__all__">Все классы</option>
+          <div class="control control-wide">
+            <label>Классы (по умолчанию все включены)</label>
+            <div id="classToggles" class="class-toggles">
               {% for class_item in dashboard.classes %}
-              <option value="{{ class_item.name }}">{{ class_item.name }}</option>
+              <button
+                type="button"
+                class="class-toggle-btn active"
+                data-class-name="{{ class_item.name }}"
+              >
+                {{ class_item.name }}
+              </button>
               {% endfor %}
-            </select>
+            </div>
           </div>
-          <div class="control">
+          <div class="control control-wide">
             <label for="searchFilter">Поиск услуги</label>
-            <input id="searchFilter" type="text" placeholder="Часть названия" />
+            <input id="searchFilter" type="text" list="servicesList" placeholder="Начните вводить и выберите услугу из списка" />
+            <datalist id="servicesList"></datalist>
+            <div id="searchStatus" class="search-status">
+              Фильтр услуги не выбран.
+            </div>
           </div>
           <div class="control">
             <label for="minTotalFilter">Мин. сумма</label>
@@ -173,12 +206,15 @@
       const fmtMoney = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const fmtPct = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const palette = ["#1f6f66","#d47d2f","#3e7cb1","#a64b5a","#5e8c31","#6c63a8","#2f9d8f","#7a4f80"];
-      const state = { mode: "absolute" };
+      const state = { mode: "absolute", selectedService: null, activeClasses: new Set() };
       const charts = {};
 
       const el = {
-        classFilter: document.getElementById("classFilter"),
+        classTogglesWrap: document.getElementById("classToggles"),
+        classToggleButtons: Array.from(document.querySelectorAll(".class-toggle-btn")),
         searchFilter: document.getElementById("searchFilter"),
+        servicesList: document.getElementById("servicesList"),
+        searchStatus: document.getElementById("searchStatus"),
         minTotalFilter: document.getElementById("minTotalFilter"),
         maxTotalFilter: document.getElementById("maxTotalFilter"),
         modeAbs: document.getElementById("modeAbs"),
@@ -194,15 +230,67 @@
       const money = (v) => fmtMoney.format(v || 0);
       const pct = (v) => `${fmtPct.format(v || 0)}%`;
       const n = (v) => (v === "" || v == null ? null : Number(v));
+      const serviceNames = [...new Set(allServices.map((x) => x.service_name))].sort((a, b) => a.localeCompare(b, "ru"));
+
+      for (const btn of el.classToggleButtons) {
+        const className = btn.dataset.className;
+        state.activeClasses.add(className);
+      }
+
+      function fillServiceDatalist() {
+        el.servicesList.innerHTML = "";
+        for (const name of serviceNames) {
+          const option = document.createElement("option");
+          option.value = name;
+          el.servicesList.appendChild(option);
+        }
+      }
+
+      function updateClassToggleVisuals() {
+        for (const btn of el.classToggleButtons) {
+          const className = btn.dataset.className;
+          const active = state.activeClasses.has(className);
+          btn.classList.toggle("active", active);
+          btn.classList.toggle("inactive", !active);
+        }
+      }
+
+      function updateSearchStatus(kind, message) {
+        el.searchStatus.classList.remove("ok", "warn");
+        if (kind) {
+          el.searchStatus.classList.add(kind);
+        }
+        el.searchStatus.textContent = message;
+      }
+
+      function syncServiceSelectionFromInput() {
+        const raw = el.searchFilter.value.trim();
+        if (!raw) {
+          state.selectedService = null;
+          updateSearchStatus("", "Фильтр услуги не выбран.");
+          return;
+        }
+
+        if (serviceNames.includes(raw)) {
+          state.selectedService = raw;
+          updateSearchStatus("ok", `Выбрана услуга: ${raw}`);
+          return;
+        }
+
+        updateSearchStatus(
+          "warn",
+          state.selectedService
+            ? `Текст не из списка. Оставлен предыдущий выбор: ${state.selectedService}`
+            : "Текст не из списка. Фильтр услуги не применен."
+        );
+      }
 
       function filteredServices() {
-        const cls = el.classFilter.value;
-        const q = el.searchFilter.value.trim().toLowerCase();
         const min = n(el.minTotalFilter.value);
         const max = n(el.maxTotalFilter.value);
         return allServices.filter((s) => {
-          if (cls !== "__all__" && s.class_name !== cls) return false;
-          if (q && !s.service_name.toLowerCase().includes(q)) return false;
+          if (!state.activeClasses.has(s.class_name)) return false;
+          if (state.selectedService && s.service_name !== state.selectedService) return false;
           if (min != null && s.total_cost < min) return false;
           if (max != null && s.total_cost > max) return false;
           return true;
@@ -341,20 +429,48 @@
         drawCharts(services, t);
       }
 
-      el.classFilter.addEventListener("change", render);
-      el.searchFilter.addEventListener("input", render);
+      el.classTogglesWrap.addEventListener("click", (event) => {
+        const button = event.target.closest(".class-toggle-btn");
+        if (!button) return;
+        const className = button.dataset.className;
+        if (state.activeClasses.has(className)) {
+          state.activeClasses.delete(className);
+        } else {
+          state.activeClasses.add(className);
+        }
+        updateClassToggleVisuals();
+        render();
+      });
+
+      el.searchFilter.addEventListener("input", () => {
+        syncServiceSelectionFromInput();
+        render();
+      });
+      el.searchFilter.addEventListener("change", () => {
+        syncServiceSelectionFromInput();
+        render();
+      });
+      el.searchFilter.addEventListener("blur", () => {
+        syncServiceSelectionFromInput();
+      });
       el.minTotalFilter.addEventListener("input", render);
       el.maxTotalFilter.addEventListener("input", render);
       el.modeAbs.addEventListener("click", () => setMode("absolute"));
       el.modePct.addEventListener("click", () => setMode("percent"));
       el.reset.addEventListener("click", () => {
-        el.classFilter.value = "__all__";
+        state.activeClasses = new Set(el.classToggleButtons.map((btn) => btn.dataset.className));
         el.searchFilter.value = "";
+        state.selectedService = null;
         el.minTotalFilter.value = "";
         el.maxTotalFilter.value = "";
+        updateClassToggleVisuals();
+        updateSearchStatus("", "Фильтр услуги не выбран.");
         setMode("absolute");
       });
 
+      fillServiceDatalist();
+      updateClassToggleVisuals();
+      syncServiceSelectionFromInput();
       render();
     </script>
     {% endif %}
