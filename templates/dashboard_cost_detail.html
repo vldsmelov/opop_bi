@@ -4,6 +4,12 @@
 <h2 class="title">{{ cost_meta.title }}: {{ service.service_name }}</h2>
 <p class="muted">Уровень 4. Глубокая детализация выбранного вида затрат и сравнение с услугами класса.</p>
 
+<p class="muted" style="margin-top:6px">
+  <a class="name-link" href="{{ cost_overview_href }}">Срез {{ cost_meta.title }}</a>
+  ·
+  <a class="name-link" href="{{ cost_class_href }}">Срез класса {{ class_row.name }}</a>
+</p>
+
 <div class="metrics" style="margin-top:10px">
   <article class="metric">
     <p class="k">Класс</p>
@@ -78,7 +84,7 @@
         {% for row in peer_rows %}
         <tr class="{% if row.is_current %}row-current{% endif %}">
           <td>
-            <a class="name-link" href="{{ url_for('dashboard_service', class_name=class_row.name, service_name=row.service_name) }}">
+            <a class="name-link" href="{{ row.href }}">
               {{ row.service_name }}
             </a>
           </td>
@@ -121,7 +127,7 @@
     },
   });
 
-  new Chart(document.getElementById("peerCostChart"), {
+  const peerChart = new Chart(document.getElementById("peerCostChart"), {
     type: "bar",
     data: {
       labels: peerRows.map((row) => row.service_name),
@@ -135,6 +141,11 @@
     options: {
       maintainAspectRatio: false,
       indexAxis: "y",
+      onClick: (_, elements) => {
+        if (!elements.length) return;
+        const row = peerRows[elements[0].index];
+        if (row?.href) window.location.href = row.href;
+      },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${money(ctx.raw)}` } },
@@ -142,5 +153,6 @@
       scales: { x: { ticks: { callback: (v) => money(v) } } },
     },
   });
+  peerChart.canvas.style.cursor = "pointer";
 </script>
 {% endblock %}

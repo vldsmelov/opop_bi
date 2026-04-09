@@ -43,6 +43,7 @@
     <article class="panel">
       <h3>Структура затрат</h3>
       <div class="canvas-wrap"><canvas id="costStructureChart"></canvas></div>
+      <p class="muted">Клик по сектору: <a class="name-link" href="{{ cost_drill_links.direct }}">прямые</a>, <a class="name-link" href="{{ cost_drill_links.indirect }}">косвенные</a>, <a class="name-link" href="{{ cost_drill_links.ineff }}">неэффективность</a>.</p>
     </article>
     <article class="panel">
       <h3>Доли классов</h3>
@@ -123,6 +124,7 @@
   const serviceMap = Object.fromEntries(servicePicker.map((item) => [item.label, item.href]));
   const classRows = {{ navigation.class_rows | tojson }};
   const totals = {{ overview.totals | tojson }};
+  const costDrillLinks = {{ cost_drill_links | tojson }};
 
   const moneyFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const pctFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -149,7 +151,7 @@
     window.location.href = href;
   });
 
-  new Chart(document.getElementById("costStructureChart"), {
+  const costChart = new Chart(document.getElementById("costStructureChart"), {
     type: "pie",
     data: {
       labels: ["Прямые", "Косвенные", "Неэффективность"],
@@ -162,6 +164,13 @@
     },
     options: {
       maintainAspectRatio: false,
+      onClick: (_, elements) => {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const key = ["direct", "indirect", "ineff"][idx];
+        const href = costDrillLinks[key];
+        if (href) window.location.href = href;
+      },
       plugins: {
         legend: { position: "bottom" },
         tooltip: {
@@ -172,6 +181,7 @@
       },
     },
   });
+  costChart.canvas.style.cursor = "pointer";
 
   new Chart(document.getElementById("classShareChart"), {
     type: "bar",
