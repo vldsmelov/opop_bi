@@ -37,12 +37,12 @@
 <article class="panel" style="margin-top:10px">
   <h3>Детальные статьи</h3>
   <div class="table-wrap">
-    <table>
+    <table class="sortable-table">
       <thead>
         <tr>
-          <th>Статья</th>
-          <th>Сумма</th>
-          <th>Доля в {{ cost_meta.title }}</th>
+          <th class="sortable" data-sort-type="text">Статья</th>
+          <th class="sortable" data-sort-type="number">Сумма</th>
+          <th class="sortable" data-sort-type="number">Доля в {{ cost_meta.title }}</th>
         </tr>
       </thead>
       <tbody>
@@ -66,12 +66,12 @@
 <article class="panel" style="margin-top:10px">
   <h3>Список услуг класса по {{ cost_meta.title }}</h3>
   <div class="table-wrap">
-    <table>
+    <table class="sortable-table">
       <thead>
         <tr>
-          <th>Услуга</th>
-          <th>Значение</th>
-          <th>Статус</th>
+          <th class="sortable" data-sort-type="text">Услуга</th>
+          <th class="sortable" data-sort-type="number">Значение</th>
+          <th class="sortable" data-sort-type="text">Статус</th>
         </tr>
       </thead>
       <tbody>

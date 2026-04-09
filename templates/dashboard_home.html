@@ -29,7 +29,7 @@
     <p class="muted">Начните ввод и выберите услугу из списка. Переход выполняется только при точном выборе.</p>
     <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
       <input id="serviceJump" list="serviceJumpList" placeholder="Введите название услуги" style="min-width:320px; flex:1" />
-      <button id="openServiceJump" class="link-btn" type="button">Открыть услугу</button>
+      <a id="openServiceJump" class="link-btn" href="#">Открыть услугу</a>
     </div>
     <datalist id="serviceJumpList">
       {% for item in service_picker %}
@@ -55,13 +55,13 @@
   <article class="panel">
     <h3>Классы (выберите класс)</h3>
     <div class="table-wrap">
-      <table>
+      <table class="sortable-table">
         <thead>
           <tr>
-            <th>Класс</th>
-            <th>Услуг</th>
-            <th>Итого</th>
-            <th>Доля</th>
+            <th class="sortable" data-sort-type="text">Класс</th>
+            <th class="sortable" data-sort-type="number">Услуг</th>
+            <th class="sortable" data-sort-type="number">Итого</th>
+            <th class="sortable" data-sort-type="number">Доля</th>
             <th>Переход</th>
           </tr>
         </thead>
@@ -83,12 +83,12 @@
   <article class="panel">
     <h3>Топ услуг (быстрый drill-down)</h3>
     <div class="table-wrap">
-      <table>
+      <table class="sortable-table">
         <thead>
           <tr>
-            <th>Класс</th>
-            <th>Услуга</th>
-            <th>Сумма</th>
+            <th class="sortable" data-sort-type="text">Класс</th>
+            <th class="sortable" data-sort-type="text">Услуга</th>
+            <th class="sortable" data-sort-type="number">Сумма</th>
             <th>Переход</th>
           </tr>
         </thead>
@@ -129,7 +129,8 @@
   const serviceBtn = document.getElementById("openServiceJump");
   const serviceStatus = document.getElementById("serviceJumpStatus");
 
-  serviceBtn.addEventListener("click", () => {
+  serviceBtn.addEventListener("click", (event) => {
+    event.preventDefault();
     const value = serviceInput.value.trim();
     if (!value) {
       serviceStatus.textContent = "Выберите услугу из подсказки.";
