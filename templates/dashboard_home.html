@@ -1,0 +1,202 @@
+{% extends "dashboard_shell.html" %}
+{% block title %}Главная - Дашборд{% endblock %}
+{% block content %}
+<h2 class="title">Главная: обзор и выбор направления</h2>
+<p class="muted">Уровень 1. Выберите класс или услугу для перехода в детальный разрез.</p>
+
+<div class="metrics" style="margin-top:10px">
+  <article class="metric">
+    <p class="k">Классы</p>
+    <p class="v">{{ overview.totals.total_classes }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Услуги</p>
+    <p class="v">{{ overview.totals.total_services }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Общая сумма</p>
+    <p class="v">{{ overview.totals.grand_total | money }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Неэффективность</p>
+    <p class="v">{{ overview.totals.inefficiency_total | money }}</p>
+  </article>
+</div>
+
+<div class="card" style="padding:0; border:none; box-shadow:none; margin-top:10px; margin-bottom:0">
+  <div class="panel" style="margin-bottom:10px">
+    <h3>Быстрый переход к услуге</h3>
+    <p class="muted">Начните ввод и выберите услугу из списка. Переход выполняется только при точном выборе.</p>
+    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+      <input id="serviceJump" list="serviceJumpList" placeholder="Введите название услуги" style="min-width:320px; flex:1" />
+      <button id="openServiceJump" class="link-btn" type="button">Открыть услугу</button>
+    </div>
+    <datalist id="serviceJumpList">
+      {% for item in service_picker %}
+      <option value="{{ item.label }}"></option>
+      {% endfor %}
+    </datalist>
+    <p id="serviceJumpStatus" class="muted" style="margin-top:8px"></p>
+  </div>
+
+  <div class="split">
+    <article class="panel">
+      <h3>Структура затрат</h3>
+      <div class="canvas-wrap"><canvas id="costStructureChart"></canvas></div>
+    </article>
+    <article class="panel">
+      <h3>Доли классов</h3>
+      <div class="canvas-wrap"><canvas id="classShareChart"></canvas></div>
+    </article>
+  </div>
+</div>
+
+<div class="split" style="margin-top:10px">
+  <article class="panel">
+    <h3>Классы (выберите класс)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Класс</th>
+            <th>Услуг</th>
+            <th>Итого</th>
+            <th>Доля</th>
+            <th>Переход</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for class_row in navigation.class_rows %}
+          <tr>
+            <td>{{ class_row.name }}</td>
+            <td class="num">{{ class_row.services_count }}</td>
+            <td class="num">{{ class_row.totals.total | money }}</td>
+            <td class="num">{{ class_row.share | pct }}</td>
+            <td><a class="link-btn" href="{{ url_for('dashboard_class', class_name=class_row.name) }}">Открыть</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="panel">
+    <h3>Топ услуг (быстрый drill-down)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Класс</th>
+            <th>Услуга</th>
+            <th>Сумма</th>
+            <th>Переход</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for service in navigation.services[:40] %}
+          <tr>
+            <td>{{ service.class_name }}</td>
+            <td>{{ service.service_name }}</td>
+            <td class="num">{{ service.total_cost | money }}</td>
+            <td>
+              <a class="link-btn" href="{{ url_for('dashboard_service', class_name=service.class_name, service_name=service.service_name) }}">
+                Открыть
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const servicePicker = {{ service_picker | tojson }};
+  const serviceMap = Object.fromEntries(servicePicker.map((item) => [item.label, item.href]));
+  const classRows = {{ navigation.class_rows | tojson }};
+  const totals = {{ overview.totals | tojson }};
+
+  const moneyFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pctFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const money = (value) => moneyFmt.format(value || 0);
+  const pct = (value) => `${pctFmt.format(value || 0)}%`;
+
+  const serviceInput = document.getElementById("serviceJump");
+  const serviceBtn = document.getElementById("openServiceJump");
+  const serviceStatus = document.getElementById("serviceJumpStatus");
+
+  serviceBtn.addEventListener("click", () => {
+    const value = serviceInput.value.trim();
+    if (!value) {
+      serviceStatus.textContent = "Выберите услугу из подсказки.";
+      return;
+    }
+    const href = serviceMap[value];
+    if (!href) {
+      serviceStatus.textContent = "Точное совпадение не найдено. Переход не выполнен.";
+      return;
+    }
+    serviceStatus.textContent = "";
+    window.location.href = href;
+  });
+
+  new Chart(document.getElementById("costStructureChart"), {
+    type: "pie",
+    data: {
+      labels: ["Прямые", "Косвенные", "Неэффективность"],
+      datasets: [{
+        data: [totals.direct_total, totals.indirect_total, totals.inefficiency_total],
+        backgroundColor: ["#1f6f66", "#3e7cb1", "#d47d2f"],
+        borderColor: "#fff",
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.label}: ${money(ctx.parsed)}`,
+          },
+        },
+      },
+    },
+  });
+
+  new Chart(document.getElementById("classShareChart"), {
+    type: "bar",
+    data: {
+      labels: classRows.map((row) => row.name),
+      datasets: [{
+        label: "Итого по классу",
+        data: classRows.map((row) => row.totals.total),
+        backgroundColor: "#2f6ba9",
+        borderRadius: 8,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => items[0]?.label || "",
+            label: (ctx) => {
+              const row = classRows[ctx.dataIndex];
+              return `${money(ctx.raw)} (${pct(row.share)})`;
+            },
+          },
+        },
+      },
+      scales: {
+        y: { ticks: { callback: (v) => money(v) } },
+      },
+    },
+  });
+</script>
+{% endblock %}

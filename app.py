@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
+from urllib.parse import quote
 
 import pandas as pd
-from flask import Flask, render_template
+from flask import Flask, abort, render_template, request, url_for
+from werkzeug.exceptions import HTTPException
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -29,6 +31,11 @@ def pct(value: float) -> str:
     except (TypeError, ValueError):
         amount = 0.0
     return f"{amount:.1f}%".replace(".", ",")
+
+
+@app.template_filter("urlquote")
+def urlquote(value: object) -> str:
+    return quote(str(value or ""), safe="")
 
 
 def load_workbook_sheets(path: Path) -> list[dict]:
@@ -536,6 +543,109 @@ def build_dashboard_data(dataset: dict) -> dict:
     }
 
 
+COST_TYPE_META = {
+    "direct": {
+        "title": "Прямые расходы",
+        "field": "direct_cost",
+        "details_field": "direct_details",
+        "color": "#1f6f66",
+    },
+    "indirect": {
+        "title": "Косвенные расходы",
+        "field": "indirect_cost",
+        "details_field": "indirect_details",
+        "color": "#3e7cb1",
+    },
+    "ineff": {
+        "title": "Неэффективность",
+        "field": "inefficiency_cost",
+        "details_field": "inefficiency_details",
+        "color": "#d47d2f",
+    },
+}
+
+
+def calc_totals(services: list[dict]) -> dict:
+    return {
+        "direct": sum(float(service.get("direct_cost", 0.0)) for service in services),
+        "indirect": sum(float(service.get("indirect_cost", 0.0)) for service in services),
+        "ineff": sum(float(service.get("inefficiency_cost", 0.0)) for service in services),
+        "total": sum(float(service.get("total_cost", 0.0)) for service in services),
+    }
+
+
+def build_navigation_data(dataset: dict) -> dict:
+    services = list(dataset.get("services", []))
+    services = [service for service in services if service.get("service_name")]
+    services.sort(key=lambda service: float(service.get("total_cost", 0.0)), reverse=True)
+
+    totals = calc_totals(services)
+    class_map: dict[str, list[dict]] = defaultdict(list)
+    for service in services:
+        class_map[str(service["class_name"])].append(service)
+
+    class_rows: list[dict] = []
+    service_index: dict[tuple[str, str], dict] = {}
+    for class_name, class_services in class_map.items():
+        class_services.sort(key=lambda service: float(service.get("total_cost", 0.0)), reverse=True)
+        class_totals = calc_totals(class_services)
+        share = (class_totals["total"] / totals["total"] * 100.0) if totals["total"] else 0.0
+        class_rows.append(
+            {
+                "name": class_name,
+                "services_count": len(class_services),
+                "totals": class_totals,
+                "share": share,
+                "top_service_name": class_services[0]["service_name"] if class_services else "-",
+                "services": class_services,
+            }
+        )
+        for service in class_services:
+            service_index[(class_name, service["service_name"])] = service
+
+    class_rows.sort(key=lambda row: row["totals"]["total"], reverse=True)
+    class_index = {row["name"]: row for row in class_rows}
+
+    service_picker = [
+        {
+            "label": f"{service['service_name']} - {service['class_name']}",
+            "class_name": service["class_name"],
+            "service_name": service["service_name"],
+        }
+        for service in services
+    ]
+
+    return {
+        "services": services,
+        "totals": totals,
+        "class_rows": class_rows,
+        "class_index": class_index,
+        "service_index": service_index,
+        "service_picker": service_picker,
+    }
+
+
+def load_dashboard_payload(path: Path) -> tuple[dict, dict, dict]:
+    dataset = load_calculation_services_dataset(path)
+    overview = build_dashboard_data(dataset)
+    navigation = build_navigation_data(dataset)
+    return dataset, overview, navigation
+
+
+def get_class_or_404(navigation: dict, class_name: str) -> dict:
+    class_row = navigation["class_index"].get(class_name)
+    if not class_row:
+        abort(404, description=f"Класс не найден: {class_name}")
+    return class_row
+
+
+def get_service_or_404(navigation: dict, class_name: str, service_name: str) -> dict:
+    service = navigation["service_index"].get((class_name, service_name))
+    if not service:
+        abort(404, description=f"Услуга не найдена: {service_name}")
+    return service
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -574,8 +684,301 @@ def calculation_services_debug():
         )
 
 
+def render_dashboard_error(error: str, status_code: int = 500):
+    return (
+        render_template(
+            "dashboard_error.html",
+            error=error,
+            current_level=1,
+            current_class_name=None,
+            current_service_name=None,
+            current_cost_title=None,
+            breadcrumbs=[{"name": "Главная", "href": url_for("dashboard_home")}],
+        ),
+        status_code,
+    )
+
+
+@app.errorhandler(404)
+def handle_404(error):
+    if request.path.startswith("/dashboard"):
+        description = getattr(error, "description", None) or "Страница не найдена"
+        return render_dashboard_error(description, status_code=404)
+    return render_template("dashboard_error.html", error="Страница не найдена"), 404
+
+
 @app.route("/dashboard")
-def dashboard():
+def dashboard_home():
+    if not EXCEL_PATH.exists():
+        return render_dashboard_error(f"Файл не найден: {EXCEL_PATH}", status_code=404)
+
+    try:
+        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        service_picker = [
+            {
+                "label": item["label"],
+                "href": url_for(
+                    "dashboard_service",
+                    class_name=item["class_name"],
+                    service_name=item["service_name"],
+                ),
+            }
+            for item in navigation["service_picker"]
+        ]
+
+        return render_template(
+            "dashboard_home.html",
+            overview=overview,
+            navigation=navigation,
+            service_picker=service_picker,
+            current_level=1,
+            current_class_name=None,
+            current_service_name=None,
+            current_cost_title=None,
+            breadcrumbs=[{"name": "Главная", "href": url_for("dashboard_home")}],
+        )
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
+        return render_dashboard_error(f"Ошибка построения дашборда: {exc}")
+
+
+@app.route("/dashboard/class/<class_name>")
+def dashboard_class(class_name: str):
+    if not EXCEL_PATH.exists():
+        return render_dashboard_error(f"Файл не найден: {EXCEL_PATH}", status_code=404)
+
+    try:
+        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        class_row = get_class_or_404(navigation, class_name)
+        services = class_row["services"]
+        service_labels = [service["service_name"] for service in services]
+        service_totals = [service["total_cost"] for service in services]
+        cost_structure = [
+            class_row["totals"]["direct"],
+            class_row["totals"]["indirect"],
+            class_row["totals"]["ineff"],
+        ]
+
+        breadcrumbs = [
+            {"name": "Главная", "href": url_for("dashboard_home")},
+            {
+                "name": class_name,
+                "href": url_for("dashboard_class", class_name=class_name),
+            },
+        ]
+
+        return render_template(
+            "dashboard_class.html",
+            overview=overview,
+            navigation=navigation,
+            class_row=class_row,
+            service_labels=service_labels,
+            service_totals=service_totals,
+            cost_structure=cost_structure,
+            current_level=2,
+            current_class_name=class_name,
+            current_service_name=None,
+            current_cost_title=None,
+            breadcrumbs=breadcrumbs,
+        )
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
+        return render_dashboard_error(f"Ошибка построения страницы класса: {exc}")
+
+
+@app.route("/dashboard/class/<class_name>/service/<service_name>")
+def dashboard_service(class_name: str, service_name: str):
+    if not EXCEL_PATH.exists():
+        return render_dashboard_error(f"Файл не найден: {EXCEL_PATH}", status_code=404)
+
+    try:
+        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        class_row = get_class_or_404(navigation, class_name)
+        service = get_service_or_404(navigation, class_name, service_name)
+
+        total_cost = float(service["total_cost"])
+        cost_cards = []
+        for cost_key, meta in COST_TYPE_META.items():
+            amount = float(service[meta["field"]])
+            share = (amount / total_cost * 100.0) if total_cost else 0.0
+            cost_cards.append(
+                {
+                    "key": cost_key,
+                    "title": meta["title"],
+                    "amount": amount,
+                    "share": share,
+                    "color": meta["color"],
+                    "href": url_for(
+                        "dashboard_cost_detail",
+                        class_name=class_name,
+                        service_name=service_name,
+                        cost_key=cost_key,
+                    ),
+                }
+            )
+
+        peer_services = class_row["services"]
+        peer_labels = [item["service_name"] for item in peer_services]
+        peer_totals = [item["total_cost"] for item in peer_services]
+        component_rows = []
+        for _, meta in COST_TYPE_META.items():
+            details = service.get(meta["details_field"], {}) or {}
+            for component, value in details.items():
+                value_float = float(value)
+                if value_float == 0:
+                    continue
+                component_rows.append(
+                    {
+                        "type": meta["title"],
+                        "component": component,
+                        "value": value_float,
+                    }
+                )
+        component_rows.sort(key=lambda row: row["value"], reverse=True)
+
+        breadcrumbs = [
+            {"name": "Главная", "href": url_for("dashboard_home")},
+            {
+                "name": class_name,
+                "href": url_for("dashboard_class", class_name=class_name),
+            },
+            {
+                "name": service_name,
+                "href": url_for(
+                    "dashboard_service",
+                    class_name=class_name,
+                    service_name=service_name,
+                ),
+            },
+        ]
+
+        return render_template(
+            "dashboard_service.html",
+            overview=overview,
+            navigation=navigation,
+            class_row=class_row,
+            service=service,
+            cost_cards=cost_cards,
+            peer_labels=peer_labels,
+            peer_totals=peer_totals,
+            component_rows=component_rows[:25],
+            current_level=3,
+            current_class_name=class_name,
+            current_service_name=service_name,
+            current_cost_title=None,
+            breadcrumbs=breadcrumbs,
+        )
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
+        return render_dashboard_error(f"Ошибка построения страницы услуги: {exc}")
+
+
+@app.route("/dashboard/class/<class_name>/service/<service_name>/cost/<cost_key>")
+def dashboard_cost_detail(class_name: str, service_name: str, cost_key: str):
+    if not EXCEL_PATH.exists():
+        return render_dashboard_error(f"Файл не найден: {EXCEL_PATH}", status_code=404)
+    if cost_key not in COST_TYPE_META:
+        abort(404, description=f"Тип затрат не найден: {cost_key}")
+
+    try:
+        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        class_row = get_class_or_404(navigation, class_name)
+        service = get_service_or_404(navigation, class_name, service_name)
+        meta = COST_TYPE_META[cost_key]
+
+        selected_value = float(service.get(meta["field"], 0.0))
+        selected_share = (
+            (selected_value / float(service["total_cost"]) * 100.0)
+            if float(service["total_cost"])
+            else 0.0
+        )
+
+        details = service.get(meta["details_field"], {}) or {}
+        detail_rows = []
+        for component, value in details.items():
+            value_float = float(value)
+            if value_float == 0:
+                continue
+            detail_rows.append(
+                {
+                    "component": component,
+                    "value": value_float,
+                    "share": (value_float / selected_value * 100.0) if selected_value else 0.0,
+                }
+            )
+        detail_rows.sort(key=lambda row: row["value"], reverse=True)
+
+        peer_rows = []
+        for peer in class_row["services"]:
+            peer_value = float(peer.get(meta["field"], 0.0))
+            peer_rows.append(
+                {
+                    "service_name": peer["service_name"],
+                    "value": peer_value,
+                    "is_current": peer["service_name"] == service_name,
+                }
+            )
+        peer_rows.sort(key=lambda row: row["value"], reverse=True)
+        ranking = next(
+            (idx + 1 for idx, row in enumerate(peer_rows) if row["is_current"]),
+            0,
+        )
+
+        breadcrumbs = [
+            {"name": "Главная", "href": url_for("dashboard_home")},
+            {
+                "name": class_name,
+                "href": url_for("dashboard_class", class_name=class_name),
+            },
+            {
+                "name": service_name,
+                "href": url_for(
+                    "dashboard_service",
+                    class_name=class_name,
+                    service_name=service_name,
+                ),
+            },
+            {
+                "name": meta["title"],
+                "href": url_for(
+                    "dashboard_cost_detail",
+                    class_name=class_name,
+                    service_name=service_name,
+                    cost_key=cost_key,
+                ),
+            },
+        ]
+
+        return render_template(
+            "dashboard_cost_detail.html",
+            overview=overview,
+            navigation=navigation,
+            class_row=class_row,
+            service=service,
+            cost_key=cost_key,
+            cost_meta=meta,
+            selected_value=selected_value,
+            selected_share=selected_share,
+            detail_rows=detail_rows,
+            peer_rows=peer_rows,
+            ranking=ranking,
+            current_level=4,
+            current_class_name=class_name,
+            current_service_name=service_name,
+            current_cost_title=meta["title"],
+            breadcrumbs=breadcrumbs,
+        )
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
+        return render_dashboard_error(f"Ошибка построения страницы затрат: {exc}")
+
+
+@app.route("/dashboard/legacy")
+def dashboard_legacy():
     if not EXCEL_PATH.exists():
         return render_template(
             "dashboard.html",

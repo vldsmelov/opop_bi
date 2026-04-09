@@ -1,0 +1,142 @@
+{% extends "dashboard_shell.html" %}
+{% block title %}{{ cost_meta.title }} - {{ service.service_name }}{% endblock %}
+{% block content %}
+<h2 class="title">{{ cost_meta.title }}: {{ service.service_name }}</h2>
+<p class="muted">Уровень 4. Глубокая детализация выбранного вида затрат и сравнение с услугами класса.</p>
+
+<div class="metrics" style="margin-top:10px">
+  <article class="metric">
+    <p class="k">Класс</p>
+    <p class="v">{{ class_row.name }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">{{ cost_meta.title }}</p>
+    <p class="v">{{ selected_value | money }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Доля в услуге</p>
+    <p class="v">{{ selected_share | pct }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Ранг в классе</p>
+    <p class="v">{{ ranking }} / {{ peer_rows | length }}</p>
+  </article>
+</div>
+
+<div class="split" style="margin-top:10px">
+  <article class="panel">
+    <h3>Состав {{ cost_meta.title }}</h3>
+    <div class="canvas-wrap"><canvas id="costCompositionChart"></canvas></div>
+  </article>
+  <article class="panel">
+    <h3>Сравнение по классу ({{ cost_meta.title }})</h3>
+    <div class="canvas-wrap"><canvas id="peerCostChart"></canvas></div>
+  </article>
+</div>
+
+<article class="panel" style="margin-top:10px">
+  <h3>Детальные статьи</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Статья</th>
+          <th>Сумма</th>
+          <th>Доля в {{ cost_meta.title }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in detail_rows %}
+        <tr>
+          <td>{{ row.component }}</td>
+          <td class="num">{{ row.value | money }}</td>
+          <td class="num">{{ row.share | pct }}</td>
+        </tr>
+        {% endfor %}
+        {% if not detail_rows %}
+        <tr>
+          <td colspan="3">Детализация по статьям отсутствует для этого вида затрат.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</article>
+
+<article class="panel" style="margin-top:10px">
+  <h3>Список услуг класса по {{ cost_meta.title }}</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Услуга</th>
+          <th>Значение</th>
+          <th>Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in peer_rows %}
+        <tr {% if row.is_current %}style="background:#fff3df"{% endif %}>
+          <td>{{ row.service_name }}</td>
+          <td class="num">{{ row.value | money }}</td>
+          <td>{% if row.is_current %}Текущая услуга{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const detailRows = {{ detail_rows | tojson }};
+  const peerRows = {{ peer_rows | tojson }};
+  const currentService = {{ service.service_name | tojson }};
+  const colorBase = {{ cost_meta.color | tojson }};
+  const moneyFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money = (value) => moneyFmt.format(value || 0);
+
+  new Chart(document.getElementById("costCompositionChart"), {
+    type: detailRows.length ? "bar" : "bar",
+    data: {
+      labels: detailRows.map((row) => row.component),
+      datasets: [{
+        label: "Сумма статьи",
+        data: detailRows.map((row) => row.value),
+        backgroundColor: colorBase,
+        borderRadius: 8,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      indexAxis: "y",
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { callback: (v) => money(v) } } },
+    },
+  });
+
+  new Chart(document.getElementById("peerCostChart"), {
+    type: "bar",
+    data: {
+      labels: peerRows.map((row) => row.service_name),
+      datasets: [{
+        label: "Значение по услуге",
+        data: peerRows.map((row) => row.value),
+        backgroundColor: peerRows.map((row) => row.service_name === currentService ? "#d47d2f" : "#2f6ba9"),
+        borderRadius: 8,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      indexAxis: "y",
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${money(ctx.raw)}` } },
+      },
+      scales: { x: { ticks: { callback: (v) => money(v) } } },
+    },
+  });
+</script>
+{% endblock %}

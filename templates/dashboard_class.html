@@ -1,0 +1,122 @@
+{% extends "dashboard_shell.html" %}
+{% block title %}Класс - {{ class_row.name }}{% endblock %}
+{% block content %}
+<h2 class="title">Класс: {{ class_row.name }}</h2>
+<p class="muted">Уровень 2. Распределение услуг внутри класса и ключевые показатели по классу.</p>
+
+<div class="metrics" style="margin-top:10px">
+  <article class="metric">
+    <p class="k">Услуг</p>
+    <p class="v">{{ class_row.services_count }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Итого класс</p>
+    <p class="v">{{ class_row.totals.total | money }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Прямые / Косвенные</p>
+    <p class="v">{{ class_row.totals.direct | money }} / {{ class_row.totals.indirect | money }}</p>
+  </article>
+  <article class="metric">
+    <p class="k">Доля от общей суммы</p>
+    <p class="v">{{ class_row.share | pct }}</p>
+  </article>
+</div>
+
+<div class="split" style="margin-top:10px">
+  <article class="panel">
+    <h3>Вес услуг в классе</h3>
+    <div class="canvas-wrap"><canvas id="classServiceBar"></canvas></div>
+  </article>
+  <article class="panel">
+    <h3>Структура затрат класса</h3>
+    <div class="canvas-wrap"><canvas id="classCostPie"></canvas></div>
+  </article>
+</div>
+
+<article class="panel" style="margin-top:10px">
+  <h3>Услуги класса (переход на уровень услуги)</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Услуга</th>
+          <th>Прямые</th>
+          <th>Косвенные</th>
+          <th>Неэффективность</th>
+          <th>Сумма</th>
+          <th>Доля в классе</th>
+          <th>Переход</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for service in class_row.services %}
+        <tr>
+          <td>{{ service.service_name }}</td>
+          <td class="num">{{ service.direct_cost | money }}</td>
+          <td class="num">{{ service.indirect_cost | money }}</td>
+          <td class="num">{{ service.inefficiency_cost | money }}</td>
+          <td class="num">{{ service.total_cost | money }}</td>
+          <td class="num">{{ (service.total_cost / class_row.totals.total * 100) | pct if class_row.totals.total else "0,0%" }}</td>
+          <td>
+            <a class="link-btn" href="{{ url_for('dashboard_service', class_name=class_row.name, service_name=service.service_name) }}">
+              Открыть услугу
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const serviceLabels = {{ service_labels | tojson }};
+  const serviceTotals = {{ service_totals | tojson }};
+  const costStructure = {{ cost_structure | tojson }};
+  const moneyFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money = (value) => moneyFmt.format(value || 0);
+
+  new Chart(document.getElementById("classServiceBar"), {
+    type: "bar",
+    data: {
+      labels: serviceLabels,
+      datasets: [{
+        label: "Сумма услуги",
+        data: serviceTotals,
+        backgroundColor: "#2f6ba9",
+        borderRadius: 8,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      indexAxis: "y",
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { callback: (v) => money(v) } } },
+    },
+  });
+
+  new Chart(document.getElementById("classCostPie"), {
+    type: "pie",
+    data: {
+      labels: ["Прямые", "Косвенные", "Неэффективность"],
+      datasets: [{
+        data: costStructure,
+        backgroundColor: ["#1f6f66", "#3e7cb1", "#d47d2f"],
+        borderColor: "#fff",
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${money(ctx.parsed)}` } },
+      },
+    },
+  });
+</script>
+{% endblock %}
