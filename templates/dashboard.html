@@ -148,7 +148,26 @@
       .chart.wide { grid-column:1/-1; }
       .canvas-wrap { min-height:280px; }
       .top-chart-wrap { min-height:360px; }
-      .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:12px; }
+      .table-toolbar { display:grid; gap:10px; margin:8px 0 12px; }
+      .table-filters { display:grid; gap:10px; grid-template-columns:repeat(4,minmax(160px,1fr)); }
+      .table-control { display:grid; gap:6px; }
+      .table-control label { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+      .table-control label svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2; }
+      .table-meta {
+        color:var(--muted);
+        font-size:12px;
+        display:flex;
+        align-items:center;
+        gap:6px;
+      }
+      .table-meta strong { color:var(--ink); font-size:14px; }
+      .table-wrap {
+        overflow:auto;
+        max-height:min(68vh, 780px);
+        border:1px solid var(--line);
+        border-radius:12px;
+        background:#fff;
+      }
       table { width:100%; border-collapse:collapse; min-width:820px; }
       th,td { border:1px solid var(--line); padding:7px 9px; }
       th {
@@ -156,17 +175,20 @@
         text-align:left;
         position:sticky;
         top:0;
-        z-index:1;
+        z-index:2;
       }
+      tbody tr:nth-child(even) { background:#fbfdff; }
       td.num { text-align:right; white-space:nowrap; }
       .error { border:1px solid #f2c6c6; background:#fff1f1; color:#8b2020; border-radius:10px; padding:10px; }
       @media (max-width:1100px) {
         .metrics { grid-template-columns:repeat(3,minmax(130px,1fr)); }
         .layout-grid,.controls,.summary,.charts { grid-template-columns:1fr; }
+        .table-filters { grid-template-columns:repeat(2,minmax(160px,1fr)); }
       }
       @media (max-width:700px) {
         .wrap { padding:14px 12px; }
         .metrics { grid-template-columns:repeat(2,minmax(130px,1fr)); }
+        .table-filters { grid-template-columns:1fr; }
       }
     </style>
   </head>
@@ -181,6 +203,9 @@
       <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h6M14 6h6M10 6v6M4 18h10M18 18h2M14 18v-6"/></symbol>
       <symbol id="i-percent" viewBox="0 0 24 24"><path d="m5 19 14-14"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></symbol>
       <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></symbol>
+      <symbol id="i-sort" viewBox="0 0 24 24"><path d="M7 5v14M7 19l-3-3M7 19l3-3M17 19V5M17 5l-3 3M17 5l3 3"/></symbol>
+      <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 5v14M6 11l6-6 6 6"/></symbol>
+      <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 19V5M6 13l6 6 6-6"/></symbol>
       <symbol id="i-pie" viewBox="0 0 24 24"><path d="M12 3v9h9"/><path d="M21 12a9 9 0 1 1-9-9"/></symbol>
       <symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20V9M12 20V4M19 20v-7"/></symbol>
       <symbol id="i-stack" viewBox="0 0 24 24"><path d="m4 8 8-4 8 4-8 4-8-4zM4 12l8 4 8-4M4 16l8 4 8-4"/></symbol>
@@ -309,6 +334,41 @@
 
       <section class="card">
         <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-table"></use></svg></span>Топ Услуг По Стоимости (динамический срез)</h2>
+        <div class="table-toolbar">
+          <div class="table-filters">
+            <div class="table-control">
+              <label for="tableServiceFilter"><svg><use href="#i-search"></use></svg>Фильтр по услуге</label>
+              <input id="tableServiceFilter" type="text" placeholder="Введите часть названия услуги" />
+            </div>
+            <div class="table-control">
+              <label for="tableClassFilter"><svg><use href="#i-filter"></use></svg>Фильтр по классу</label>
+              <select id="tableClassFilter">
+                <option value="">Все классы</option>
+                {% for class_item in dashboard.classes %}
+                <option value="{{ class_item.name }}">{{ class_item.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="table-control">
+              <label for="tableSortKey"><svg><use href="#i-sort"></use></svg>Сортировка</label>
+              <select id="tableSortKey">
+                <option value="total_cost">Сумма</option>
+                <option value="share">Доля в срезе</option>
+                <option value="service_name">Услуга</option>
+                <option value="class_name">Класс</option>
+                <option value="direct_cost">Прямые</option>
+                <option value="indirect_cost">Косвенные</option>
+                <option value="inefficiency_cost">Неэффективность</option>
+                <option value="indirect_sum">Косвенные сумма</option>
+              </select>
+            </div>
+            <div class="table-control">
+              <label><svg><use href="#i-sort"></use></svg>Порядок</label>
+              <button id="tableSortDir" type="button" class="mode-btn"><svg><use href="#i-arrow-down"></use></svg>По убыванию</button>
+            </div>
+          </div>
+          <div class="table-meta">Показано строк: <strong id="tableRowsCount">0</strong></div>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -337,7 +397,15 @@
       const fmtMoney = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const fmtPct = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const palette = ["#1f6f66","#d47d2f","#3e7cb1","#a64b5a","#5e8c31","#6c63a8","#2f9d8f","#7a4f80"];
-      const state = { mode: "absolute", selectedService: null, activeClasses: new Set() };
+      const state = {
+        mode: "absolute",
+        selectedService: null,
+        activeClasses: new Set(),
+        tableQuery: "",
+        tableClass: "",
+        tableSortKey: "total_cost",
+        tableSortDir: "desc",
+      };
       const charts = {};
 
       const el = {
@@ -355,6 +423,11 @@
         di: document.getElementById("sliceDirectIndirect"),
         ineff: document.getElementById("sliceInefficiency"),
         tableBody: document.getElementById("topServicesTableBody"),
+        tableServiceFilter: document.getElementById("tableServiceFilter"),
+        tableClassFilter: document.getElementById("tableClassFilter"),
+        tableSortKey: document.getElementById("tableSortKey"),
+        tableSortDir: document.getElementById("tableSortDir"),
+        tableRowsCount: document.getElementById("tableRowsCount"),
         topChartWrap: document.getElementById("topServicesWrap"),
       };
 
@@ -454,13 +527,81 @@
         el.ineff.textContent = `${money(t.ineff)} (${pct(t.total ? (t.ineff / t.total) * 100 : 0)})`;
       }
 
+      function updateTableSortDirButton() {
+        const isAsc = state.tableSortDir === "asc";
+        el.tableSortDir.innerHTML = isAsc
+          ? '<svg><use href="#i-arrow-up"></use></svg>По возрастанию'
+          : '<svg><use href="#i-arrow-down"></use></svg>По убыванию';
+      }
+
+      function compareText(a, b) {
+        return String(a || "").localeCompare(String(b || ""), "ru");
+      }
+
+      function compareNumber(a, b) {
+        return (Number(a) || 0) - (Number(b) || 0);
+      }
+
+      function applyTableFiltersAndSort(services, t) {
+        let rows = [...services];
+        const query = state.tableQuery.trim().toLowerCase();
+
+        if (query) {
+          rows = rows.filter((s) =>
+            s.service_name.toLowerCase().includes(query) ||
+            s.class_name.toLowerCase().includes(query)
+          );
+        }
+
+        if (state.tableClass) {
+          rows = rows.filter((s) => s.class_name === state.tableClass);
+        }
+
+        const dir = state.tableSortDir === "asc" ? 1 : -1;
+        rows.sort((a, b) => {
+          let cmp = 0;
+          switch (state.tableSortKey) {
+            case "class_name":
+              cmp = compareText(a.class_name, b.class_name);
+              break;
+            case "service_name":
+              cmp = compareText(a.service_name, b.service_name);
+              break;
+            case "direct_cost":
+            case "indirect_cost":
+            case "inefficiency_cost":
+            case "indirect_sum":
+            case "total_cost":
+              cmp = compareNumber(a[state.tableSortKey], b[state.tableSortKey]);
+              break;
+            case "share": {
+              const aShare = t.total ? a.total_cost / t.total : 0;
+              const bShare = t.total ? b.total_cost / t.total : 0;
+              cmp = compareNumber(aShare, bShare);
+              break;
+            }
+            default:
+              cmp = compareNumber(a.total_cost, b.total_cost);
+          }
+          if (cmp === 0) {
+            return compareText(a.service_name, b.service_name);
+          }
+          return cmp * dir;
+        });
+
+        return rows;
+      }
+
       function renderTable(services, t) {
-        const top = [...services].sort((a, b) => b.total_cost - a.total_cost);
-        if (!top.length) {
+        const rows = applyTableFiltersAndSort(services, t);
+        el.tableRowsCount.textContent = rows.length;
+
+        if (!rows.length) {
           el.tableBody.innerHTML = '<tr><td colspan="8">Нет данных под текущий фильтр.</td></tr>';
           return;
         }
-        el.tableBody.innerHTML = top.map((s) => `
+
+        el.tableBody.innerHTML = rows.map((s) => `
           <tr>
             <td>${s.class_name}</td>
             <td>${s.service_name}</td>
@@ -620,6 +761,12 @@
         drawCharts(services, t);
       }
 
+      function renderTableOnly() {
+        const services = filteredServices();
+        const t = totals(services);
+        renderTable(services, t);
+      }
+
       el.classTogglesWrap.addEventListener("click", (event) => {
         const button = event.target.closest(".class-toggle-btn");
         if (!button) return;
@@ -652,19 +799,46 @@
         render();
         el.searchFilter.focus();
       });
+      el.tableServiceFilter.addEventListener("input", () => {
+        state.tableQuery = el.tableServiceFilter.value;
+        renderTableOnly();
+      });
+      el.tableClassFilter.addEventListener("change", () => {
+        state.tableClass = el.tableClassFilter.value;
+        renderTableOnly();
+      });
+      el.tableSortKey.addEventListener("change", () => {
+        state.tableSortKey = el.tableSortKey.value;
+        renderTableOnly();
+      });
+      el.tableSortDir.addEventListener("click", () => {
+        state.tableSortDir = state.tableSortDir === "asc" ? "desc" : "asc";
+        updateTableSortDirButton();
+        renderTableOnly();
+      });
       el.modeAbs.addEventListener("click", () => setMode("absolute"));
       el.modePct.addEventListener("click", () => setMode("percent"));
       el.reset.addEventListener("click", () => {
         state.activeClasses = new Set(el.classToggleButtons.map((btn) => btn.dataset.className));
         el.searchFilter.value = "";
         state.selectedService = null;
+        state.tableQuery = "";
+        state.tableClass = "";
+        state.tableSortKey = "total_cost";
+        state.tableSortDir = "desc";
+        el.tableServiceFilter.value = "";
+        el.tableClassFilter.value = "";
+        el.tableSortKey.value = state.tableSortKey;
         updateClassToggleVisuals();
         updateSearchStatus("", "Фильтр услуги не выбран.");
         updateClearSearchState();
+        updateTableSortDirButton();
         setMode("absolute");
       });
 
       fillServiceDatalist();
+      el.tableSortKey.value = state.tableSortKey;
+      updateTableSortDirButton();
       updateClassToggleVisuals();
       syncServiceSelectionFromInput();
       render();
