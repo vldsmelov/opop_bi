@@ -11,7 +11,7 @@
         margin:0; color:var(--ink); font-family:"Trebuchet MS",sans-serif;
         background: radial-gradient(900px 500px at 100% -10%, #d7f0ea 0%, transparent 70%), linear-gradient(#f7f8f1,#edf3f8);
       }
-      .wrap { max-width:1320px; margin:0 auto; padding:20px; }
+      .wrap { width:100%; max-width:none; margin:0; padding:20px 24px; }
       .card { background:#fff; border:1px solid #e4ebf2; border-radius:16px; padding:16px; margin-top:14px; }
       h1,h2,h3 { margin:0 0 10px; font-family:"Palatino Linotype",serif; }
       .muted { color:var(--muted); margin:0; }
@@ -65,6 +65,7 @@
       .chart { border:1px solid var(--line); border-radius:12px; padding:10px; }
       .chart.wide { grid-column:1/-1; }
       .canvas-wrap { min-height:280px; }
+      .top-chart-wrap { min-height:360px; }
       .table-wrap { overflow:auto; }
       table { width:100%; border-collapse:collapse; min-width:820px; }
       th,td { border:1px solid var(--line); padding:7px 9px; }
@@ -165,12 +166,15 @@
               <h3>Состав затрат по классам (stacked)</h3>
               <div class="canvas-wrap"><canvas id="classStackBar"></canvas></div>
             </article>
-            <article class="chart wide">
-              <h3>Топ услуг по стоимости (bar)</h3>
-              <div class="canvas-wrap"><canvas id="topServicesBar"></canvas></div>
-            </article>
           </div>
         </div>
+      </section>
+
+      <section class="card">
+        <h2>Топ услуг по стоимости (bar)</h2>
+        <article class="chart">
+          <div id="topServicesWrap" class="canvas-wrap top-chart-wrap"><canvas id="topServicesBar"></canvas></div>
+        </article>
       </section>
 
       <section class="card">
@@ -220,6 +224,7 @@
         di: document.getElementById("sliceDirectIndirect"),
         ineff: document.getElementById("sliceInefficiency"),
         tableBody: document.getElementById("topServicesTableBody"),
+        topChartWrap: document.getElementById("topServicesWrap"),
       };
 
       const money = (v) => fmtMoney.format(v || 0);
@@ -312,7 +317,7 @@
       }
 
       function renderTable(services, t) {
-        const top = [...services].sort((a, b) => b.total_cost - a.total_cost).slice(0, 12);
+        const top = [...services].sort((a, b) => b.total_cost - a.total_cost);
         if (!top.length) {
           el.tableBody.innerHTML = '<tr><td colspan="8">Нет данных под текущий фильтр.</td></tr>';
           return;
@@ -380,6 +385,11 @@
         });
       }
 
+      function setTopChartHeight(serviceCount) {
+        const height = Math.max(360, serviceCount * 28 + 120);
+        el.topChartWrap.style.height = `${height}px`;
+      }
+
       function drawCharts(services, t) {
         destroyCharts();
         const cls = byClass(services);
@@ -398,9 +408,10 @@
         const f = state.mode === "percent" ? cls.map((x) => x.total ? (x.ineff / x.total) * 100 : 0) : cls.map((x) => x.ineff);
         charts.stack = stacked("classStackBar", clsLabels, d, i, f);
 
-        const top = [...services].sort((a, b) => b.total_cost - a.total_cost).slice(0, 12);
+        const top = [...services].sort((a, b) => b.total_cost - a.total_cost);
         const topLabels = top.map((x) => x.service_name);
         const topValues = state.mode === "percent" ? top.map((x) => t.total ? (x.total_cost / t.total) * 100 : 0) : top.map((x) => x.total_cost);
+        setTopChartHeight(top.length);
         charts.top = bar("topServicesBar", topLabels, topValues, true, "#1f6f66", "Топ услуг");
       }
 
