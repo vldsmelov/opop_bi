@@ -45,11 +45,28 @@
         height: calc(100vh - 28px);
         overflow: auto;
       }
+      .side-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
       .brand {
         margin: 0;
         font-family: "Palatino Linotype", serif;
         font-size: 24px;
       }
+      .collapse-btn {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #eef6ff;
+        color: #114f80;
+        width: 34px;
+        height: 34px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .collapse-btn:hover { background: #e3f0ff; }
       .side-note {
         color: var(--muted);
         margin: 6px 0 14px;
@@ -102,6 +119,17 @@
       }
       .main {
         min-width: 0;
+      }
+      .app.side-collapsed {
+        grid-template-columns: 84px 1fr;
+      }
+      .app.side-collapsed .side-note,
+      .app.side-collapsed .step-list,
+      .app.side-collapsed .side-links {
+        display: none;
+      }
+      .app.side-collapsed .brand {
+        font-size: 18px;
       }
       .card {
         background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
@@ -201,17 +229,23 @@
         white-space: nowrap;
       }
       .link-btn {
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        border: 1px solid #bfd6eb;
-        border-radius: 9px;
-        background: #eef6ff;
-        color: #114f80;
+        color: #165487;
+        text-decoration: underline;
         font-weight: 700;
-        padding: 6px 10px;
       }
-      .link-btn:hover { background: #e3f0ff; }
+      .link-btn:hover { color: #0f3f67; }
+      th.sortable {
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+      }
+      th.sortable::after {
+        content: " ↕";
+        color: #5e7d97;
+        font-size: 12px;
+      }
+      th.sortable[data-sort-dir="asc"]::after { content: " ↑"; color: #114f80; }
+      th.sortable[data-sort-dir="desc"]::after { content: " ↓"; color: #114f80; }
       .tag-grid {
         display: grid;
         gap: 10px;
@@ -254,9 +288,12 @@
     {% block extra_head %}{% endblock %}
   </head>
   <body>
-    <div class="app">
+    <div class="app" id="dashApp">
       <aside class="side">
-        <h1 class="brand">ОПиОП BI</h1>
+        <div class="side-top">
+          <h1 class="brand">ОПиОП BI</h1>
+          <button id="sideCollapseToggle" class="collapse-btn" type="button" title="Свернуть панель">«</button>
+        </div>
         <p class="side-note">Вертикальная навигация для управленческого drill-down.</p>
 
         <ul class="step-list">
@@ -321,6 +358,70 @@
         </section>
       </main>
     </div>
+    <script>
+      (function () {
+        const app = document.getElementById("dashApp");
+        const toggle = document.getElementById("sideCollapseToggle");
+        const key = "dashboard_side_collapsed";
+        const applyState = (collapsed) => {
+          app.classList.toggle("side-collapsed", collapsed);
+          toggle.textContent = collapsed ? "»" : "«";
+          toggle.title = collapsed ? "Развернуть панель" : "Свернуть панель";
+        };
+        const initial = localStorage.getItem(key) === "1";
+        applyState(initial);
+        toggle.addEventListener("click", () => {
+          const collapsed = !app.classList.contains("side-collapsed");
+          applyState(collapsed);
+          localStorage.setItem(key, collapsed ? "1" : "0");
+        });
+      })();
+
+      (function () {
+        const parseNumber = (text) => {
+          const normalized = String(text || "")
+            .replace(/\s+/g, "")
+            .replace(/%/g, "")
+            .replace(/,/g, ".")
+            .replace(/[^0-9.\-]/g, "");
+          const value = Number.parseFloat(normalized);
+          return Number.isFinite(value) ? value : 0;
+        };
+
+        const compare = (a, b, type) => {
+          if (type === "number") return parseNumber(a) - parseNumber(b);
+          return String(a || "").localeCompare(String(b || ""), "ru");
+        };
+
+        document.querySelectorAll("table.sortable-table").forEach((table) => {
+          const headers = Array.from(table.querySelectorAll("thead th.sortable"));
+          const tbody = table.querySelector("tbody");
+          if (!tbody || !headers.length) return;
+
+          headers.forEach((th, index) => {
+            th.dataset.sortDir = "none";
+            th.addEventListener("click", () => {
+              const rows = Array.from(tbody.querySelectorAll("tr"));
+              if (!rows.length) return;
+              if (rows.some((row) => row.querySelector("td[colspan]"))) return;
+
+              const nextDir = th.dataset.sortDir === "asc" ? "desc" : "asc";
+              headers.forEach((item) => { item.dataset.sortDir = "none"; });
+              th.dataset.sortDir = nextDir;
+
+              const type = th.dataset.sortType || "text";
+              rows.sort((rowA, rowB) => {
+                const a = rowA.children[index]?.innerText?.trim() || "";
+                const b = rowB.children[index]?.innerText?.trim() || "";
+                const base = compare(a, b, type);
+                return nextDir === "asc" ? base : -base;
+              });
+              rows.forEach((row) => tbody.appendChild(row));
+            });
+          });
+        });
+      })();
+    </script>
     {% block scripts %}{% endblock %}
   </body>
 </html>
