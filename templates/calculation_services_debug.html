@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Калькуляция: услуги по классам</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: "Segoe UI", sans-serif;
+        background: #f3f5f8;
+        color: #18202a;
+      }
+
+      h1 {
+        margin-top: 0;
+      }
+
+      .meta {
+        color: #3f4d5d;
+        font-size: 14px;
+      }
+
+      .links a {
+        margin-right: 12px;
+        color: #0a5ec2;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .group {
+        margin-top: 20px;
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+
+      th,
+      td {
+        border: 1px solid #d8dde5;
+        padding: 8px 10px;
+      }
+
+      th {
+        background: #ecf2fa;
+        text-align: left;
+      }
+
+      td.num {
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      tfoot td {
+        background: #f5f8fd;
+        font-weight: 700;
+      }
+
+      .error {
+        padding: 12px;
+        border-radius: 10px;
+        background: #fde7e7;
+        color: #8f2121;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Калькуляция: услуги по классам</h1>
+    <p class="meta">
+      Источник: лист <code>Калькуляция</code>.<br />
+      Косвенные расходы = <code>Косвенные расходы ИТОГО</code> -
+      <code>Неэффективность из-за отсутстствия объемов</code>.<br />
+      Неэффективность = <code>Расходы на аренду</code> +
+      <code>Расходы на аренду ПРТ (козловой кран)</code> +
+      <code>Расходы на услуги РЖД</code>.<br />
+      Косвенные сумма = <code>Косвенные расходы</code> +
+      <code>Неэффективность из-за отсутстствия объемов</code>.
+    </p>
+    <p class="links">
+      <a href="/">На главную</a>
+      <a href="/excel-debug">Все листы Excel</a>
+    </p>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    {% for group in class_tables %}
+    <section class="group">
+      <h2>Класс: {{ group.class_name }}</h2>
+      <p class="meta">Услуг в классе: {{ group.services|length }}</p>
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">Услуга</th>
+            <th rowspan="2">Прямые расходы</th>
+            <th colspan="3">Косвенный блок</th>
+            <th rowspan="2">Сумма</th>
+          </tr>
+          <tr>
+            <th>Косвенные расходы</th>
+            <th>Неэффективность из-за отсутстствия объемов</th>
+            <th>Косвенные сумма</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for service in group.services %}
+          <tr>
+            <td>{{ service.service_name }}</td>
+            <td class="num">{{ service.direct_cost | money }}</td>
+            <td class="num">{{ service.indirect_cost | money }}</td>
+            <td class="num">{{ service.inefficiency_cost | money }}</td>
+            <td class="num">{{ service.indirect_sum | money }}</td>
+            <td class="num">{{ service.total_cost | money }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Итого по классу</td>
+            <td class="num">{{ group.direct_total | money }}</td>
+            <td class="num">{{ group.indirect_total | money }}</td>
+            <td class="num">{{ group.inefficiency_total | money }}</td>
+            <td class="num">{{ group.indirect_sum_total | money }}</td>
+            <td class="num">{{ group.grand_total | money }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+    {% endfor %}
+  </body>
+</html>

@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Дашборд: Калькуляция услуг</title>
+    <style>
+      :root { --ink:#1b2b3b; --muted:#566b80; --line:#d7e0ea; --accent:#1f6f66; }
+      * { box-sizing:border-box; }
+      body {
+        margin:0; color:var(--ink); font-family:"Trebuchet MS",sans-serif;
+        background: radial-gradient(900px 500px at 100% -10%, #d7f0ea 0%, transparent 70%), linear-gradient(#f7f8f1,#edf3f8);
+      }
+      .wrap { max-width:1320px; margin:0 auto; padding:20px; }
+      .card { background:#fff; border:1px solid #e4ebf2; border-radius:16px; padding:16px; margin-top:14px; }
+      h1,h2,h3 { margin:0 0 10px; font-family:"Palatino Linotype",serif; }
+      .muted { color:var(--muted); margin:0; }
+      .links { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+      .links a { text-decoration:none; color:#0c4f8f; border:1px solid #cfe0f3; background:#eff6ff; padding:7px 10px; border-radius:9px; font-weight:700; }
+      .metrics { display:grid; gap:10px; grid-template-columns:repeat(6,minmax(140px,1fr)); }
+      .metric { border:1px solid var(--line); border-radius:12px; padding:10px; background:#fbfdff; }
+      .metric .k { font-size:12px; text-transform:uppercase; color:var(--muted); }
+      .metric .v { font-size:22px; font-weight:800; margin-top:6px; }
+      .controls { display:grid; gap:10px; grid-template-columns:repeat(4,minmax(150px,1fr)); }
+      .control { display:grid; gap:5px; }
+      .control label { font-size:12px; color:var(--muted); }
+      input,select,button { border:1px solid #cfdbe9; border-radius:9px; padding:8px 10px; font:inherit; }
+      .mode { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; align-items:center; }
+      .mode b { color:var(--muted); font-size:13px; }
+      .mode-btn { background:#f4f8fc; color:#0e416e; font-weight:700; cursor:pointer; }
+      .mode-btn.active { background:#dff0ff; border-color:#a6c9eb; }
+      .summary { margin-top:10px; display:grid; gap:10px; grid-template-columns:repeat(4,minmax(140px,1fr)); }
+      .summary div { border:1px solid var(--line); border-radius:10px; padding:8px 10px; color:var(--muted); background:#fbfdff; }
+      .summary strong { color:var(--ink); }
+      .charts { display:grid; gap:10px; grid-template-columns:repeat(2,minmax(260px,1fr)); }
+      .chart { border:1px solid var(--line); border-radius:12px; padding:10px; }
+      .chart.wide { grid-column:1/-1; }
+      .canvas-wrap { min-height:280px; }
+      .table-wrap { overflow:auto; }
+      table { width:100%; border-collapse:collapse; min-width:820px; }
+      th,td { border:1px solid var(--line); padding:7px 9px; }
+      th { background:#f3f7fb; text-align:left; }
+      td.num { text-align:right; white-space:nowrap; }
+      .error { border:1px solid #f2c6c6; background:#fff1f1; color:#8b2020; border-radius:10px; padding:10px; }
+      @media (max-width:1100px) {
+        .metrics { grid-template-columns:repeat(3,minmax(130px,1fr)); }
+        .controls,.summary,.charts { grid-template-columns:1fr; }
+      }
+      @media (max-width:700px) { .metrics { grid-template-columns:repeat(2,minmax(130px,1fr)); } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="card">
+        <h1>Дашборд по услугам (лист «Калькуляция»)</h1>
+        <p class="muted">Фильтры и графики пересчитываются в реальном времени. Режим графиков: абсолютные значения или проценты.</p>
+        <div class="links">
+          <a href="/">Главная</a>
+          <a href="/calculation-services-debug">Тех. расчёты</a>
+          <a href="/excel-debug">Все листы Excel</a>
+        </div>
+      </section>
+
+      {% if error %}
+      <section class="card"><div class="error">{{ error }}</div></section>
+      {% endif %}
+
+      {% if dashboard %}
+      <section class="card">
+        <h2>Ключевые Метрики</h2>
+        <div class="metrics">
+          <div class="metric"><div class="k">Услуг</div><div class="v">{{ dashboard.totals.total_services }}</div></div>
+          <div class="metric"><div class="k">Классов</div><div class="v">{{ dashboard.totals.total_classes }}</div></div>
+          <div class="metric"><div class="k">Прямые</div><div class="v">{{ dashboard.totals.direct_total | money }}</div></div>
+          <div class="metric"><div class="k">Косвенные</div><div class="v">{{ dashboard.totals.indirect_total | money }}</div></div>
+          <div class="metric"><div class="k">Неэффективность</div><div class="v">{{ dashboard.totals.inefficiency_total | money }}</div></div>
+          <div class="metric"><div class="k">Итого</div><div class="v">{{ dashboard.totals.grand_total | money }}</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Фильтры И Режим</h2>
+        <div class="controls">
+          <div class="control">
+            <label for="classFilter">Класс</label>
+            <select id="classFilter">
+              <option value="__all__">Все классы</option>
+              {% for class_item in dashboard.classes %}
+              <option value="{{ class_item.name }}">{{ class_item.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="control">
+            <label for="searchFilter">Поиск услуги</label>
+            <input id="searchFilter" type="text" placeholder="Часть названия" />
+          </div>
+          <div class="control">
+            <label for="minTotalFilter">Мин. сумма</label>
+            <input id="minTotalFilter" type="number" min="0" step="0.01" />
+          </div>
+          <div class="control">
+            <label for="maxTotalFilter">Макс. сумма</label>
+            <input id="maxTotalFilter" type="number" min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="mode">
+          <b>Режим графиков:</b>
+          <button id="modeAbs" class="mode-btn active">Абсолютные</button>
+          <button id="modePct" class="mode-btn">Проценты</button>
+          <button id="resetFilters" class="mode-btn">Сброс</button>
+        </div>
+        <div class="summary">
+          <div>Услуг в срезе: <strong id="sliceServices">-</strong></div>
+          <div>Общая сумма: <strong id="sliceTotal">-</strong></div>
+          <div>Прямые / Косвенные: <strong id="sliceDirectIndirect">-</strong></div>
+          <div>Неэффективность: <strong id="sliceInefficiency">-</strong></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Визуальный Срез</h2>
+        <div class="charts">
+          <article class="chart">
+            <h3>Структура стоимости (pie)</h3>
+            <div class="canvas-wrap"><canvas id="costStructurePie"></canvas></div>
+          </article>
+          <article class="chart">
+            <h3>Доли классов (pie)</h3>
+            <div class="canvas-wrap"><canvas id="classSharePie"></canvas></div>
+          </article>
+          <article class="chart">
+            <h3>Итого по классам (bar)</h3>
+            <div class="canvas-wrap"><canvas id="classTotalsBar"></canvas></div>
+          </article>
+          <article class="chart">
+            <h3>Состав затрат по классам (stacked)</h3>
+            <div class="canvas-wrap"><canvas id="classStackBar"></canvas></div>
+          </article>
+          <article class="chart wide">
+            <h3>Топ услуг по стоимости (bar)</h3>
+            <div class="canvas-wrap"><canvas id="topServicesBar"></canvas></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Топ Услуг По Стоимости (динамический срез)</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Класс</th>
+                <th>Услуга</th>
+                <th>Прямые</th>
+                <th>Косвенные</th>
+                <th>Неэффективность</th>
+                <th>Косвенные сумма</th>
+                <th>Сумма</th>
+                <th>Доля в срезе</th>
+              </tr>
+            </thead>
+            <tbody id="topServicesTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+      {% endif %}
+    </div>
+
+    {% if dashboard %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script>
+      const allServices = {{ dashboard.all_services | tojson }};
+      const fmtMoney = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmtPct = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const palette = ["#1f6f66","#d47d2f","#3e7cb1","#a64b5a","#5e8c31","#6c63a8","#2f9d8f","#7a4f80"];
+      const state = { mode: "absolute" };
+      const charts = {};
+
+      const el = {
+        classFilter: document.getElementById("classFilter"),
+        searchFilter: document.getElementById("searchFilter"),
+        minTotalFilter: document.getElementById("minTotalFilter"),
+        maxTotalFilter: document.getElementById("maxTotalFilter"),
+        modeAbs: document.getElementById("modeAbs"),
+        modePct: document.getElementById("modePct"),
+        reset: document.getElementById("resetFilters"),
+        services: document.getElementById("sliceServices"),
+        total: document.getElementById("sliceTotal"),
+        di: document.getElementById("sliceDirectIndirect"),
+        ineff: document.getElementById("sliceInefficiency"),
+        tableBody: document.getElementById("topServicesTableBody"),
+      };
+
+      const money = (v) => fmtMoney.format(v || 0);
+      const pct = (v) => `${fmtPct.format(v || 0)}%`;
+      const n = (v) => (v === "" || v == null ? null : Number(v));
+
+      function filteredServices() {
+        const cls = el.classFilter.value;
+        const q = el.searchFilter.value.trim().toLowerCase();
+        const min = n(el.minTotalFilter.value);
+        const max = n(el.maxTotalFilter.value);
+        return allServices.filter((s) => {
+          if (cls !== "__all__" && s.class_name !== cls) return false;
+          if (q && !s.service_name.toLowerCase().includes(q)) return false;
+          if (min != null && s.total_cost < min) return false;
+          if (max != null && s.total_cost > max) return false;
+          return true;
+        });
+      }
+
+      function totals(services) {
+        return services.reduce((a, s) => {
+          a.direct += s.direct_cost; a.indirect += s.indirect_cost; a.ineff += s.inefficiency_cost; a.total += s.total_cost;
+          return a;
+        }, { direct: 0, indirect: 0, ineff: 0, total: 0 });
+      }
+
+      function byClass(services) {
+        const m = new Map();
+        for (const s of services) {
+          if (!m.has(s.class_name)) m.set(s.class_name, { class_name: s.class_name, direct: 0, indirect: 0, ineff: 0, total: 0 });
+          const x = m.get(s.class_name);
+          x.direct += s.direct_cost; x.indirect += s.indirect_cost; x.ineff += s.inefficiency_cost; x.total += s.total_cost;
+        }
+        return [...m.values()].sort((a, b) => b.total - a.total);
+      }
+
+      function setSummary(services, t) {
+        el.services.textContent = services.length;
+        el.total.textContent = money(t.total);
+        el.di.textContent = `${money(t.direct)} / ${money(t.indirect)}`;
+        el.ineff.textContent = `${money(t.ineff)} (${pct(t.total ? (t.ineff / t.total) * 100 : 0)})`;
+      }
+
+      function renderTable(services, t) {
+        const top = [...services].sort((a, b) => b.total_cost - a.total_cost).slice(0, 12);
+        if (!top.length) {
+          el.tableBody.innerHTML = '<tr><td colspan="8">Нет данных под текущий фильтр.</td></tr>';
+          return;
+        }
+        el.tableBody.innerHTML = top.map((s) => `
+          <tr>
+            <td>${s.class_name}</td>
+            <td>${s.service_name}</td>
+            <td class="num">${money(s.direct_cost)}</td>
+            <td class="num">${money(s.indirect_cost)}</td>
+            <td class="num">${money(s.inefficiency_cost)}</td>
+            <td class="num">${money(s.indirect_sum)}</td>
+            <td class="num">${money(s.total_cost)}</td>
+            <td class="num">${pct(t.total ? (s.total_cost / t.total) * 100 : 0)}</td>
+          </tr>`).join("");
+      }
+
+      function destroyCharts() {
+        Object.values(charts).forEach((c) => c && c.destroy && c.destroy());
+      }
+
+      function pie(id, labels, values) {
+        return new Chart(document.getElementById(id), {
+          type: "pie",
+          data: { labels, datasets: [{ data: values, backgroundColor: labels.map((_, i) => palette[i % palette.length]), borderColor: "#fff", borderWidth: 2 }] },
+          options: {
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: { callbacks: { label: (ctx) => state.mode === "percent" ? `${ctx.label}: ${pct(ctx.parsed)}` : `${ctx.label}: ${money(ctx.parsed)}` } }
+            }
+          }
+        });
+      }
+
+      function bar(id, labels, values, horizontal = false, color = "#3e7cb1", label = "Значение") {
+        return new Chart(document.getElementById(id), {
+          type: "bar",
+          data: { labels, datasets: [{ label, data: values, backgroundColor: color, borderRadius: 8 }] },
+          options: {
+            maintainAspectRatio: false,
+            indexAxis: horizontal ? "y" : "x",
+            scales: horizontal ? { x: { ticks: { callback: (v) => state.mode === "percent" ? pct(v) : money(v) } } } : { y: { ticks: { callback: (v) => state.mode === "percent" ? pct(v) : money(v) } } },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+
+      function stacked(id, labels, d, i, f) {
+        return new Chart(document.getElementById(id), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              { label: "Прямые", data: d, backgroundColor: "#1f6f66" },
+              { label: "Косвенные", data: i, backgroundColor: "#3e7cb1" },
+              { label: "Неэффективность", data: f, backgroundColor: "#d47d2f" },
+            ],
+          },
+          options: {
+            maintainAspectRatio: false,
+            scales: { x: { stacked: true }, y: { stacked: true, suggestedMax: state.mode === "percent" ? 100 : undefined, ticks: { callback: (v) => state.mode === "percent" ? pct(v) : money(v) } } },
+            plugins: { legend: { position: "bottom" } },
+          },
+        });
+      }
+
+      function drawCharts(services, t) {
+        destroyCharts();
+        const cls = byClass(services);
+        const clsLabels = cls.map((x) => x.class_name);
+        const clsTotals = cls.map((x) => x.total);
+        const clsShares = clsTotals.map((v) => t.total ? (v / t.total) * 100 : 0);
+
+        const costAbs = [t.direct, t.indirect, t.ineff];
+        const costPct = costAbs.map((v) => t.total ? (v / t.total) * 100 : 0);
+        charts.cost = pie("costStructurePie", ["Прямые","Косвенные","Неэффективность"], state.mode === "percent" ? costPct : costAbs);
+        charts.classPie = pie("classSharePie", clsLabels, state.mode === "percent" ? clsShares : clsTotals);
+        charts.classBar = bar("classTotalsBar", clsLabels, state.mode === "percent" ? clsShares : clsTotals, false, "#3e7cb1", "Итого по классу");
+
+        const d = state.mode === "percent" ? cls.map((x) => x.total ? (x.direct / x.total) * 100 : 0) : cls.map((x) => x.direct);
+        const i = state.mode === "percent" ? cls.map((x) => x.total ? (x.indirect / x.total) * 100 : 0) : cls.map((x) => x.indirect);
+        const f = state.mode === "percent" ? cls.map((x) => x.total ? (x.ineff / x.total) * 100 : 0) : cls.map((x) => x.ineff);
+        charts.stack = stacked("classStackBar", clsLabels, d, i, f);
+
+        const top = [...services].sort((a, b) => b.total_cost - a.total_cost).slice(0, 12);
+        const topLabels = top.map((x) => x.service_name);
+        const topValues = state.mode === "percent" ? top.map((x) => t.total ? (x.total_cost / t.total) * 100 : 0) : top.map((x) => x.total_cost);
+        charts.top = bar("topServicesBar", topLabels, topValues, true, "#1f6f66", "Топ услуг");
+      }
+
+      function setMode(mode) {
+        state.mode = mode;
+        el.modeAbs.classList.toggle("active", mode === "absolute");
+        el.modePct.classList.toggle("active", mode === "percent");
+        render();
+      }
+
+      function render() {
+        const services = filteredServices();
+        const t = totals(services);
+        setSummary(services, t);
+        renderTable(services, t);
+        drawCharts(services, t);
+      }
+
+      el.classFilter.addEventListener("change", render);
+      el.searchFilter.addEventListener("input", render);
+      el.minTotalFilter.addEventListener("input", render);
+      el.maxTotalFilter.addEventListener("input", render);
+      el.modeAbs.addEventListener("click", () => setMode("absolute"));
+      el.modePct.addEventListener("click", () => setMode("percent"));
+      el.reset.addEventListener("click", () => {
+        el.classFilter.value = "__all__";
+        el.searchFilter.value = "";
+        el.minTotalFilter.value = "";
+        el.maxTotalFilter.value = "";
+        setMode("absolute");
+      });
+
+      render();
+    </script>
+    {% endif %}
+  </body>
+</html>

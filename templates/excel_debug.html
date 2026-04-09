@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Excel Debug</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: "Segoe UI", sans-serif;
+        background: #f3f5f8;
+        color: #18202a;
+      }
+
+      h1 {
+        margin-top: 0;
+      }
+
+      .links a {
+        margin-right: 12px;
+        color: #0a5ec2;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .sheet {
+        margin-top: 20px;
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+
+      th,
+      td {
+        border: 1px solid #d8dde5;
+        text-align: left;
+        padding: 8px 10px;
+        white-space: nowrap;
+      }
+
+      th {
+        background: #ecf2fa;
+      }
+
+      .meta {
+        color: #3f4d5d;
+        font-size: 14px;
+      }
+
+      .error {
+        padding: 12px;
+        border-radius: 10px;
+        background: #fde7e7;
+        color: #8f2121;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Excel Debug</h1>
+    <p class="meta">
+      Техническая страница: загружены все листы из <code>data/data.xlsx</code>.
+    </p>
+    <p class="links">
+      <a href="/">На главную</a>
+      <a href="/calculation-services-debug">Услуги по классам</a>
+    </p>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    {% for sheet in sheets %}
+    <section class="sheet">
+      <h2>{{ sheet.name }}</h2>
+      <p class="meta">Строк: {{ sheet.row_count }}</p>
+      <table>
+        <thead>
+          <tr>
+            {% for col in sheet.columns %}
+            <th>{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in sheet.rows %}
+          <tr>
+            {% for col in sheet.columns %}
+            <td>{{ row[col] }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endfor %}
+  </body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Дашборд ОПиОП</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+        background:
+          radial-gradient(1000px 500px at 85% -10%, #d9ece8 0%, transparent 70%),
+          radial-gradient(900px 400px at -5% 20%, #ffe6cc 0%, transparent 70%),
+          linear-gradient(180deg, #f8f8f3 0%, #edf3f8 100%);
+        color: #18202a;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .card {
+        width: min(920px, 100%);
+        background: #ffffff;
+        border: 1px solid #e4ebf2;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 12px 26px rgba(25, 38, 56, 0.09);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(26px, 4.5vw, 40px);
+        font-family: "Palatino Linotype", "Book Antiqua", serif;
+      }
+
+      p {
+        margin: 0;
+        color: #42576e;
+        line-height: 1.45;
+      }
+
+      .links {
+        margin-top: 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .link {
+        text-decoration: none;
+        color: #0e4f8e;
+        background: #eef6ff;
+        border: 1px solid #d1e2f5;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Проект дашборда</h1>
+      <p>Основной экран готов: переходите в дашборд с метриками и детализацией.</p>
+      <div class="links">
+        <a class="link" href="/dashboard">Открыть дашборд</a>
+        <a class="link" href="/calculation-services-debug">Тех. расчёты (debug)</a>
+        <a class="link" href="/excel-debug">Все листы Excel (debug)</a>
+      </div>
+    </main>
+  </body>
+</html>
