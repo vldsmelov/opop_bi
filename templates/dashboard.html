@@ -187,11 +187,42 @@
       td.num { text-align:right; white-space:nowrap; }
       .mini-grid { display:grid; gap:10px; grid-template-columns:repeat(2,minmax(240px,1fr)); margin-top:10px; }
       .type-block { margin-top:10px; }
+      .drill-panel {
+        border:1px solid var(--line);
+        border-radius:14px;
+        padding:12px;
+        background:linear-gradient(180deg, #ffffff 0%, #f3f9ff 100%);
+        margin-bottom:12px;
+      }
+      .drill-head {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:10px;
+        flex-wrap:wrap;
+        margin-bottom:8px;
+      }
+      .drill-title { font-weight:800; font-size:17px; color:#0f2c45; }
+      .table-drill-row { cursor:pointer; }
+      .table-drill-row:hover { background:#edf5fd; }
+      .table-drill-row.active { background:#dceeff !important; }
+      .service-link-btn {
+        border:none;
+        background:transparent;
+        color:#0f4f80;
+        font-weight:700;
+        text-align:left;
+        padding:0;
+        cursor:pointer;
+      }
+      .service-link-btn:hover { text-decoration:underline; }
+      .detail-grid { display:grid; gap:10px; grid-template-columns:repeat(3,minmax(220px,1fr)); margin-top:10px; }
+      .detail-table-wrap { max-height:300px; }
       .error { border:1px solid #f2c6c6; background:#fff1f1; color:#8b2020; border-radius:10px; padding:10px; }
       @media (max-width:1100px) {
         .metrics { grid-template-columns:repeat(3,minmax(130px,1fr)); }
         .layout-grid,.controls,.summary,.charts { grid-template-columns:1fr; }
-        .mini-grid,.level-metrics { grid-template-columns:1fr; }
+        .mini-grid,.level-metrics,.detail-grid { grid-template-columns:1fr; }
       }
       @media (max-width:700px) {
         .wrap { padding:14px 12px; }
@@ -366,6 +397,64 @@
       <section class="card" id="level-2">
         <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-filter"></use></svg></span>Уровень 2: Дашборд По Классам</h2>
         <p class="section-note">Фокус: вклад каждого класса в итоговый финансовый результат и концентрация рисков.</p>
+        <div class="drill-panel">
+          <div class="drill-head">
+            <div>
+              <div class="drill-title">Провал по классу: <span id="drillClassName">-</span></div>
+              <div id="drillClassHint" class="section-note">Нажмите на класс в графиках верхнего уровня, чтобы увидеть его детализацию.</div>
+            </div>
+            <button id="clearDrillClass" type="button" class="mode-btn"><svg><use href="#i-reset"></use></svg>Сброс класса</button>
+          </div>
+          <div class="metrics level-metrics">
+            <div class="metric">
+              <div class="metric-head"><div class="k">Услуг В Классе</div><span class="icon-chip"><svg><use href="#i-dot"></use></svg></span></div>
+              <div class="v" id="drillClassServicesCount">-</div>
+            </div>
+            <div class="metric">
+              <div class="metric-head"><div class="k">Прямые</div><span class="icon-chip"><svg><use href="#i-bars"></use></svg></span></div>
+              <div class="v" id="drillClassDirect">-</div>
+            </div>
+            <div class="metric">
+              <div class="metric-head"><div class="k">Косвенные</div><span class="icon-chip"><svg><use href="#i-stack"></use></svg></span></div>
+              <div class="v" id="drillClassIndirect">-</div>
+            </div>
+            <div class="metric">
+              <div class="metric-head"><div class="k">Неэффективность</div><span class="icon-chip"><svg><use href="#i-reset"></use></svg></span></div>
+              <div class="v" id="drillClassIneff">-</div>
+            </div>
+          </div>
+          <div class="summary">
+            <div><span class="summary-label"><svg><use href="#i-pie"></use></svg>Итого по классу:</span><strong id="drillClassTotal">-</strong></div>
+            <div><span class="summary-label"><svg><use href="#i-percent"></use></svg>Доля класса в общей сумме:</span><strong id="drillClassShare">-</strong></div>
+          </div>
+          <div class="charts">
+            <article class="chart">
+              <h3><svg><use href="#i-bars"></use></svg>Вес услуг внутри класса</h3>
+              <div class="canvas-wrap"><canvas id="drillClassServicesBar"></canvas></div>
+            </article>
+            <article class="chart">
+              <h3><svg><use href="#i-pie"></use></svg>Структура затрат в классе</h3>
+              <div class="canvas-wrap"><canvas id="drillClassStructurePie"></canvas></div>
+            </article>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Услуга</th>
+                  <th>Прямые</th>
+                  <th>Косвенные</th>
+                  <th>Неэффективность</th>
+                  <th>Сумма</th>
+                  <th>Доля в классе</th>
+                </tr>
+              </thead>
+              <tbody id="drillClassServicesBody">
+                <tr><td colspan="6">Выберите класс на графике уровня 1.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
         <div class="metrics level-metrics">
           <div class="metric">
             <div class="metric-head"><div class="k">Классов</div><span class="icon-chip"><svg><use href="#i-filter"></use></svg></span></div>
@@ -427,6 +516,101 @@
       <section class="card" id="level-3">
         <h2 class="title-line"><span class="icon-chip"><svg><use href="#i-table"></use></svg></span>Уровень 3: Дашборд По Услугам</h2>
         <p class="section-note">Фокус: структура портфеля услуг, медианные значения и концентрация неэффективности.</p>
+        <div class="drill-panel">
+          <div class="drill-head">
+            <div>
+              <div class="drill-title">Деталь по услуге: <span id="drillServiceName">-</span></div>
+              <div id="drillServiceHint" class="section-note">Нажмите на услугу в таблице или на гистограмме уровня 2.</div>
+            </div>
+            <button id="clearDrillService" type="button" class="mode-btn"><svg><use href="#i-reset"></use></svg>Сброс услуги</button>
+          </div>
+          <div class="metrics level-metrics">
+            <div class="metric">
+              <div class="metric-head"><div class="k">Класс</div><span class="icon-chip"><svg><use href="#i-filter"></use></svg></span></div>
+              <div class="v" id="drillServiceClass">-</div>
+            </div>
+            <div class="metric">
+              <div class="metric-head"><div class="k">Сумма Услуги</div><span class="icon-chip"><svg><use href="#i-pie"></use></svg></span></div>
+              <div class="v" id="drillServiceTotal">-</div>
+            </div>
+            <div class="metric">
+              <div class="metric-head"><div class="k">Прямые</div><span class="icon-chip"><svg><use href="#i-bars"></use></svg></span></div>
+              <div class="v" id="drillServiceDirect">-</div>
+            </div>
+            <div class="metric">
+              <div class="metric-head"><div class="k">Косвенные</div><span class="icon-chip"><svg><use href="#i-stack"></use></svg></span></div>
+              <div class="v" id="drillServiceIndirect">-</div>
+            </div>
+            <div class="metric">
+              <div class="metric-head"><div class="k">Неэффективность</div><span class="icon-chip"><svg><use href="#i-reset"></use></svg></span></div>
+              <div class="v" id="drillServiceIneff">-</div>
+            </div>
+            <div class="metric">
+              <div class="metric-head"><div class="k">Доля Неэффективности</div><span class="icon-chip"><svg><use href="#i-percent"></use></svg></span></div>
+              <div class="v" id="drillServiceIneffShare">-</div>
+            </div>
+          </div>
+          <div class="charts">
+            <article class="chart">
+              <h3><svg><use href="#i-pie"></use></svg>Структура затрат услуги</h3>
+              <div class="canvas-wrap"><canvas id="drillServiceStructurePie"></canvas></div>
+            </article>
+            <article class="chart">
+              <h3><svg><use href="#i-bars"></use></svg>Статьи затрат услуги</h3>
+              <div class="canvas-wrap"><canvas id="drillServiceComponentsBar"></canvas></div>
+            </article>
+          </div>
+          <div class="detail-grid">
+            <div class="chart">
+              <h3><svg><use href="#i-bars"></use></svg>Прямые (детально)</h3>
+              <div class="table-wrap detail-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Статья</th>
+                      <th>Сумма</th>
+                    </tr>
+                  </thead>
+                  <tbody id="drillDirectDetailsBody">
+                    <tr><td colspan="2">Нет данных</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="chart">
+              <h3><svg><use href="#i-stack"></use></svg>Косвенные (детально)</h3>
+              <div class="table-wrap detail-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Статья</th>
+                      <th>Сумма</th>
+                    </tr>
+                  </thead>
+                  <tbody id="drillIndirectDetailsBody">
+                    <tr><td colspan="2">Нет данных</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="chart">
+              <h3><svg><use href="#i-reset"></use></svg>Неэффективность (детально)</h3>
+              <div class="table-wrap detail-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Статья</th>
+                      <th>Сумма</th>
+                    </tr>
+                  </thead>
+                  <tbody id="drillIneffDetailsBody">
+                    <tr><td colspan="2">Нет данных</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="metrics level-metrics">
           <div class="metric">
             <div class="metric-head"><div class="k">Услуг</div><span class="icon-chip"><svg><use href="#i-dot"></use></svg></span></div>
@@ -576,8 +760,11 @@
         tableQuery: "",
         tableSortKey: "total_cost",
         tableSortDir: "desc",
+        drillClass: null,
+        drillServiceName: null,
       };
       const charts = {};
+      const drillCharts = {};
       const staticCharts = {};
 
       const el = {
@@ -599,11 +786,36 @@
         tableServiceFilter: document.getElementById("tableServiceFilter"),
         tableRowsCount: document.getElementById("tableRowsCount"),
         topChartWrap: document.getElementById("topServicesWrap"),
+        level2Section: document.getElementById("level-2"),
+        level3Section: document.getElementById("level-3"),
+        drillClassName: document.getElementById("drillClassName"),
+        drillClassHint: document.getElementById("drillClassHint"),
+        clearDrillClass: document.getElementById("clearDrillClass"),
+        drillClassServicesCount: document.getElementById("drillClassServicesCount"),
+        drillClassDirect: document.getElementById("drillClassDirect"),
+        drillClassIndirect: document.getElementById("drillClassIndirect"),
+        drillClassIneff: document.getElementById("drillClassIneff"),
+        drillClassTotal: document.getElementById("drillClassTotal"),
+        drillClassShare: document.getElementById("drillClassShare"),
+        drillClassServicesBody: document.getElementById("drillClassServicesBody"),
+        clearDrillService: document.getElementById("clearDrillService"),
+        drillServiceName: document.getElementById("drillServiceName"),
+        drillServiceHint: document.getElementById("drillServiceHint"),
+        drillServiceClass: document.getElementById("drillServiceClass"),
+        drillServiceTotal: document.getElementById("drillServiceTotal"),
+        drillServiceDirect: document.getElementById("drillServiceDirect"),
+        drillServiceIndirect: document.getElementById("drillServiceIndirect"),
+        drillServiceIneff: document.getElementById("drillServiceIneff"),
+        drillServiceIneffShare: document.getElementById("drillServiceIneffShare"),
+        drillDirectDetailsBody: document.getElementById("drillDirectDetailsBody"),
+        drillIndirectDetailsBody: document.getElementById("drillIndirectDetailsBody"),
+        drillIneffDetailsBody: document.getElementById("drillIneffDetailsBody"),
       };
 
       const money = (v) => fmtMoney.format(v || 0);
       const pct = (v) => `${fmtPct.format(v || 0)}%`;
       const serviceNames = [...new Set(allServices.map((x) => x.service_name))].sort((a, b) => a.localeCompare(b, "ru"));
+      const globalTotalCost = allServices.reduce((acc, service) => acc + (service.total_cost || 0), 0);
 
       for (const btn of el.classToggleButtons) {
         const className = btn.dataset.className;
@@ -688,6 +900,35 @@
           x.direct += s.direct_cost; x.indirect += s.indirect_cost; x.ineff += s.inefficiency_cost; x.total += s.total_cost;
         }
         return [...m.values()].sort((a, b) => b.total - a.total);
+      }
+
+      function escapeHtml(text) {
+        return String(text ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function getServicesForClass(className) {
+        return allServices
+          .filter((service) => service.class_name === className)
+          .sort((a, b) => b.total_cost - a.total_cost);
+      }
+
+      function getDrillService() {
+        if (!state.drillClass || !state.drillServiceName) return null;
+        return allServices.find(
+          (service) =>
+            service.class_name === state.drillClass &&
+            service.service_name === state.drillServiceName
+        ) || null;
+      }
+
+      function jumpToLevel(sectionElement) {
+        if (!sectionElement) return;
+        sectionElement.scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
       function setSummary(services, t) {
@@ -775,9 +1016,9 @@
         }
 
         el.tableBody.innerHTML = rows.map((s) => `
-          <tr>
-            <td>${s.class_name}</td>
-            <td>${s.service_name}</td>
+          <tr class="table-drill-row" data-class-name="${encodeURIComponent(s.class_name)}" data-service-name="${encodeURIComponent(s.service_name)}">
+            <td>${escapeHtml(s.class_name)}</td>
+            <td>${escapeHtml(s.service_name)}</td>
             <td class="num">${money(s.direct_cost)}</td>
             <td class="num">${money(s.indirect_cost)}</td>
             <td class="num">${money(s.inefficiency_cost)}</td>
@@ -789,6 +1030,11 @@
 
       function destroyCharts() {
         Object.values(charts).forEach((c) => c && c.destroy && c.destroy());
+      }
+
+      function destroyDrillCharts() {
+        Object.values(drillCharts).forEach((c) => c && c.destroy && c.destroy());
+        Object.keys(drillCharts).forEach((key) => delete drillCharts[key]);
       }
 
       function pie(id, labels, values) {
@@ -880,6 +1126,345 @@
             },
           },
         });
+      }
+
+      function setDrillClass(className, options = {}) {
+        const { scroll = false } = options;
+        if (!className) {
+          state.drillClass = null;
+          state.drillServiceName = null;
+          renderDrilldown();
+          return;
+        }
+        state.drillClass = className;
+        if (state.drillServiceName) {
+          const exists = allServices.some(
+            (service) =>
+              service.class_name === className &&
+              service.service_name === state.drillServiceName
+          );
+          if (!exists) state.drillServiceName = null;
+        }
+        renderDrilldown();
+        if (scroll) jumpToLevel(el.level2Section);
+      }
+
+      function setDrillService(className, serviceName, options = {}) {
+        const { scroll = false } = options;
+        if (!className || !serviceName) return;
+        const service = allServices.find(
+          (row) => row.class_name === className && row.service_name === serviceName
+        );
+        if (!service) return;
+        state.drillClass = className;
+        state.drillServiceName = serviceName;
+        renderDrilldown();
+        if (scroll) jumpToLevel(el.level3Section);
+      }
+
+      function renderDetailTable(bodyElement, details) {
+        const rows = Object.entries(details || {})
+          .filter(([, value]) => Number(value) !== 0)
+          .sort((a, b) => Number(b[1]) - Number(a[1]));
+        if (!rows.length) {
+          bodyElement.innerHTML = '<tr><td colspan="2">Нет данных</td></tr>';
+          return;
+        }
+        bodyElement.innerHTML = rows
+          .map(
+            ([name, value]) => `
+            <tr>
+              <td>${escapeHtml(name)}</td>
+              <td class="num">${money(value)}</td>
+            </tr>`
+          )
+          .join("");
+      }
+
+      function renderClassDrill() {
+        if (!state.drillClass) {
+          el.drillClassName.textContent = "-";
+          el.drillClassHint.textContent = "Нажмите на класс в графиках верхнего уровня, чтобы увидеть его детализацию.";
+          el.drillClassServicesCount.textContent = "-";
+          el.drillClassDirect.textContent = "-";
+          el.drillClassIndirect.textContent = "-";
+          el.drillClassIneff.textContent = "-";
+          el.drillClassTotal.textContent = "-";
+          el.drillClassShare.textContent = "-";
+          el.clearDrillClass.disabled = true;
+          el.drillClassServicesBody.innerHTML = '<tr><td colspan="6">Выберите класс на графике уровня 1.</td></tr>';
+          return;
+        }
+
+        const classServices = getServicesForClass(state.drillClass);
+        if (!classServices.length) {
+          state.drillClass = null;
+          state.drillServiceName = null;
+          renderClassDrill();
+          return;
+        }
+
+        const classTotals = totals(classServices);
+        const classShareOfTotal = globalTotalCost ? (classTotals.total / globalTotalCost) * 100 : 0;
+
+        el.clearDrillClass.disabled = false;
+        el.drillClassName.textContent = state.drillClass;
+        el.drillClassHint.textContent = "Клик по услуге в графике или таблице откроет детальный уровень услуги.";
+        el.drillClassServicesCount.textContent = String(classServices.length);
+        el.drillClassDirect.textContent = money(classTotals.direct);
+        el.drillClassIndirect.textContent = money(classTotals.indirect);
+        el.drillClassIneff.textContent = money(classTotals.ineff);
+        el.drillClassTotal.textContent = money(classTotals.total);
+        el.drillClassShare.textContent = pct(classShareOfTotal);
+
+        const classServiceLabels = classServices.map((service) => service.service_name);
+        const classServiceValuesAbs = classServices.map((service) => service.total_cost);
+        const classServiceValuesPct = classServices.map((service) =>
+          classTotals.total ? (service.total_cost / classTotals.total) * 100 : 0
+        );
+        const classServiceValues = state.mode === "percent" ? classServiceValuesPct : classServiceValuesAbs;
+
+        const classServicesCanvas = document.getElementById("drillClassServicesBar");
+        classServicesCanvas.parentElement.style.height = `${Math.max(280, classServices.length * 28 + 110)}px`;
+        drillCharts.classServices = new Chart(classServicesCanvas, {
+          type: "bar",
+          data: {
+            labels: classServiceLabels,
+            datasets: [
+              {
+                label: state.mode === "percent" ? "Доля услуги в классе" : "Сумма услуги",
+                data: classServiceValues,
+                absData: classServiceValuesAbs,
+                backgroundColor: "#2f7f73",
+                borderRadius: 8,
+              },
+            ],
+          },
+          options: {
+            maintainAspectRatio: false,
+            indexAxis: "y",
+            onClick: (_event, elements) => {
+              if (!elements.length) return;
+              const idx = elements[0].index;
+              const service = classServices[idx];
+              setDrillService(state.drillClass, service.service_name, { scroll: true });
+            },
+            scales: {
+              x: {
+                suggestedMax: state.mode === "percent" ? 100 : undefined,
+                ticks: { callback: (value) => (state.mode === "percent" ? pct(value) : money(value)) },
+              },
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const abs = ctx.dataset.absData?.[ctx.dataIndex] || 0;
+                    if (state.mode === "percent") {
+                      return `${ctx.label}: ${pct(ctx.raw)} (${money(abs)})`;
+                    }
+                    return `${ctx.label}: ${money(abs)}`;
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        const classStructureAbs = [classTotals.direct, classTotals.indirect, classTotals.ineff];
+        const classStructurePct = classStructureAbs.map((value) =>
+          classTotals.total ? (value / classTotals.total) * 100 : 0
+        );
+        const classStructureValues = state.mode === "percent" ? classStructurePct : classStructureAbs;
+        drillCharts.classStructure = new Chart(document.getElementById("drillClassStructurePie"), {
+          type: "pie",
+          data: {
+            labels: ["Прямые", "Косвенные", "Неэффективность"],
+            datasets: [
+              {
+                data: classStructureValues,
+                absData: classStructureAbs,
+                backgroundColor: ["#1f6f66", "#3e7cb1", "#d47d2f"],
+                borderColor: "#fff",
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const abs = ctx.dataset.absData?.[ctx.dataIndex] || 0;
+                    if (state.mode === "percent") {
+                      return `${ctx.label}: ${pct(ctx.parsed)} (${money(abs)})`;
+                    }
+                    return `${ctx.label}: ${money(abs)}`;
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        el.drillClassServicesBody.innerHTML = classServices
+          .map((service) => {
+            const shareInClass = classTotals.total ? (service.total_cost / classTotals.total) * 100 : 0;
+            const isActive = state.drillServiceName === service.service_name;
+            return `
+              <tr class="table-drill-row ${isActive ? "active" : ""}" data-drill-service-name="${encodeURIComponent(service.service_name)}">
+                <td><button type="button" class="service-link-btn">${escapeHtml(service.service_name)}</button></td>
+                <td class="num">${money(service.direct_cost)}</td>
+                <td class="num">${money(service.indirect_cost)}</td>
+                <td class="num">${money(service.inefficiency_cost)}</td>
+                <td class="num">${money(service.total_cost)}</td>
+                <td class="num">${pct(shareInClass)}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function renderServiceDrill() {
+        const service = getDrillService();
+        if (!service) {
+          el.drillServiceName.textContent = "-";
+          el.drillServiceHint.textContent = "Нажмите на услугу в таблице или на гистограмме уровня 2.";
+          el.drillServiceClass.textContent = "-";
+          el.drillServiceTotal.textContent = "-";
+          el.drillServiceDirect.textContent = "-";
+          el.drillServiceIndirect.textContent = "-";
+          el.drillServiceIneff.textContent = "-";
+          el.drillServiceIneffShare.textContent = "-";
+          el.clearDrillService.disabled = true;
+          el.drillDirectDetailsBody.innerHTML = '<tr><td colspan="2">Нет данных</td></tr>';
+          el.drillIndirectDetailsBody.innerHTML = '<tr><td colspan="2">Нет данных</td></tr>';
+          el.drillIneffDetailsBody.innerHTML = '<tr><td colspan="2">Нет данных</td></tr>';
+          return;
+        }
+
+        const serviceTotal = service.total_cost || 0;
+        const ineffShare = serviceTotal ? (service.inefficiency_cost / serviceTotal) * 100 : 0;
+
+        el.clearDrillService.disabled = false;
+        el.drillServiceName.textContent = service.service_name;
+        el.drillServiceHint.textContent = "Показаны детальные статьи затрат выбранной услуги.";
+        el.drillServiceClass.textContent = service.class_name;
+        el.drillServiceTotal.textContent = money(service.total_cost);
+        el.drillServiceDirect.textContent = money(service.direct_cost);
+        el.drillServiceIndirect.textContent = money(service.indirect_cost);
+        el.drillServiceIneff.textContent = money(service.inefficiency_cost);
+        el.drillServiceIneffShare.textContent = pct(ineffShare);
+
+        const serviceStructureAbs = [service.direct_cost, service.indirect_cost, service.inefficiency_cost];
+        const serviceStructurePct = serviceStructureAbs.map((value) =>
+          serviceTotal ? (value / serviceTotal) * 100 : 0
+        );
+        const serviceStructureValues = state.mode === "percent" ? serviceStructurePct : serviceStructureAbs;
+        drillCharts.serviceStructure = new Chart(document.getElementById("drillServiceStructurePie"), {
+          type: "pie",
+          data: {
+            labels: ["Прямые", "Косвенные", "Неэффективность"],
+            datasets: [
+              {
+                data: serviceStructureValues,
+                absData: serviceStructureAbs,
+                backgroundColor: ["#1f6f66", "#3e7cb1", "#d47d2f"],
+                borderColor: "#fff",
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const abs = ctx.dataset.absData?.[ctx.dataIndex] || 0;
+                    if (state.mode === "percent") {
+                      return `${ctx.label}: ${pct(ctx.parsed)} (${money(abs)})`;
+                    }
+                    return `${ctx.label}: ${money(abs)}`;
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        const componentRows = [
+          ...Object.entries(service.direct_details || {}).map(([name, value]) => ({ label: `Прямые: ${name}`, value, color: "#1f6f66" })),
+          ...Object.entries(service.indirect_details || {}).map(([name, value]) => ({ label: `Косвенные: ${name}`, value, color: "#3e7cb1" })),
+          ...Object.entries(service.inefficiency_details || {}).map(([name, value]) => ({ label: `Неэффективность: ${name}`, value, color: "#d47d2f" })),
+        ]
+          .filter((row) => Number(row.value) !== 0)
+          .sort((a, b) => Number(b.value) - Number(a.value))
+          .slice(0, 20);
+
+        const componentCanvas = document.getElementById("drillServiceComponentsBar");
+        componentCanvas.parentElement.style.height = `${Math.max(280, componentRows.length * 24 + 110)}px`;
+        drillCharts.serviceComponents = new Chart(componentCanvas, {
+          type: "bar",
+          data: {
+            labels: componentRows.map((row) => row.label),
+            datasets: [
+              {
+                label: "Сумма статьи",
+                data: componentRows.map((row) => row.value),
+                backgroundColor: componentRows.map((row) => row.color),
+                borderRadius: 8,
+              },
+            ],
+          },
+          options: {
+            maintainAspectRatio: false,
+            indexAxis: "y",
+            scales: { x: { ticks: { callback: (value) => money(value) } } },
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${money(ctx.raw)}` } },
+            },
+          },
+        });
+
+        renderDetailTable(el.drillDirectDetailsBody, service.direct_details);
+        renderDetailTable(el.drillIndirectDetailsBody, service.indirect_details);
+        renderDetailTable(el.drillIneffDetailsBody, service.inefficiency_details);
+      }
+
+      function renderDrilldown() {
+        destroyDrillCharts();
+        renderClassDrill();
+        renderServiceDrill();
+      }
+
+      function attachClassDrillHandlers(classRows) {
+        const classLabels = classRows.map((row) => row.class_name);
+        const pieCanvas = document.getElementById("classSharePie");
+        const stackCanvas = document.getElementById("classStackBar");
+        pieCanvas.style.cursor = classLabels.length ? "pointer" : "default";
+        stackCanvas.style.cursor = classLabels.length ? "pointer" : "default";
+
+        pieCanvas.onclick = (event) => {
+          if (!charts.classPie) return;
+          const points = charts.classPie.getElementsAtEventForMode(event, "nearest", { intersect: true }, true);
+          if (!points.length) return;
+          const className = classLabels[points[0].index];
+          setDrillClass(className, { scroll: true });
+        };
+
+        stackCanvas.onclick = (event) => {
+          if (!charts.stack) return;
+          const points = charts.stack.getElementsAtEventForMode(event, "nearest", { intersect: true }, true);
+          if (!points.length) return;
+          const className = classLabels[points[0].index];
+          setDrillClass(className, { scroll: true });
+        };
       }
 
       function destroyStaticCharts() {
@@ -1026,6 +1611,7 @@
         const i = state.mode === "percent" ? cls.map((x) => x.total ? (x.indirect / x.total) * 100 : 0) : cls.map((x) => x.indirect);
         const f = state.mode === "percent" ? cls.map((x) => x.total ? (x.ineff / x.total) * 100 : 0) : cls.map((x) => x.ineff);
         charts.stack = stacked("classStackBar", clsLabels, d, i, f);
+        attachClassDrillHandlers(cls);
 
         const top = [...services].sort((a, b) => b.total_cost - a.total_cost);
         const topLabels = top.map((x) => x.service_name);
@@ -1054,6 +1640,7 @@
         setSummary(services, t);
         renderTable(services, t);
         drawCharts(services, t);
+        renderDrilldown();
       }
 
       function renderTableOnly() {
@@ -1098,6 +1685,26 @@
         state.tableQuery = el.tableServiceFilter.value;
         renderTableOnly();
       });
+      el.tableBody.addEventListener("click", (event) => {
+        const row = event.target.closest("tr[data-class-name][data-service-name]");
+        if (!row) return;
+        const className = decodeURIComponent(row.dataset.className || "");
+        const serviceName = decodeURIComponent(row.dataset.serviceName || "");
+        setDrillService(className, serviceName, { scroll: true });
+      });
+      el.drillClassServicesBody.addEventListener("click", (event) => {
+        const row = event.target.closest("tr[data-drill-service-name]");
+        if (!row || !state.drillClass) return;
+        const serviceName = decodeURIComponent(row.dataset.drillServiceName || "");
+        setDrillService(state.drillClass, serviceName, { scroll: true });
+      });
+      el.clearDrillClass.addEventListener("click", () => {
+        setDrillClass(null);
+      });
+      el.clearDrillService.addEventListener("click", () => {
+        state.drillServiceName = null;
+        renderDrilldown();
+      });
       for (const th of el.tableHeaders) {
         th.addEventListener("click", () => {
           const key = th.dataset.sortKey;
@@ -1120,6 +1727,8 @@
         state.tableQuery = "";
         state.tableSortKey = "total_cost";
         state.tableSortDir = "desc";
+        state.drillClass = null;
+        state.drillServiceName = null;
         el.tableServiceFilter.value = "";
         updateClassToggleVisuals();
         updateSearchStatus("", "Фильтр услуги не выбран.");
