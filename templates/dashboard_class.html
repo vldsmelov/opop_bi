@@ -1,73 +1,115 @@
 {% extends "dashboard_shell.html" %}
+
 {% block title %}Класс - {{ class_row.name }}{% endblock %}
+
 {% block content %}
-<h2 class="title">Класс: {{ class_row.name }}</h2>
-<p class="muted">Уровень 2. Распределение услуг внутри класса и ключевые показатели по классу.</p>
-
-<div class="metrics" style="margin-top:10px">
-  <article class="metric">
-    <p class="k">Услуг</p>
-    <p class="v">{{ class_row.services_count }}</p>
-  </article>
-  <article class="metric">
-    <p class="k">Итого класс</p>
-    <p class="v">{{ class_row.totals.total | money }}</p>
-  </article>
-  <article class="metric">
-    <p class="k">Прямые / Косвенные</p>
-    <p class="v">{{ class_row.totals.direct | money }} / {{ class_row.totals.indirect | money }}</p>
-  </article>
-  <article class="metric">
-    <p class="k">Доля от общей суммы</p>
-    <p class="v">{{ class_row.share | pct }}</p>
-  </article>
+<div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div>
+    <h2 class="text-2xl font-bold text-gray-900">Класс: {{ class_row.name }}</h2>
+    <p class="text-sm text-gray-500 mt-1">Распределение услуг внутри класса и ключевые показатели.</p>
+  </div>
 </div>
 
-<div class="split" style="margin-top:10px">
-  <article class="panel">
-    <h3>Вес услуг в классе</h3>
-    <div class="canvas-wrap"><canvas id="classServiceBar"></canvas></div>
-  </article>
-  <article class="panel">
-    <h3>Структура затрат класса</h3>
-    <div class="canvas-wrap"><canvas id="classCostPie"></canvas></div>
-    <p class="muted">Клик по сектору откроет срез по выбранному виду затрат внутри класса.</p>
-  </article>
+<!-- KPI Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Всего Услуг</h3>
+      <div class="p-2 bg-blue-50 rounded-lg">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </div>
+    </div>
+    <p class="text-3xl font-bold text-gray-900">{{ class_row.services_count }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Итого класс</h3>
+      <div class="p-2 bg-green-50 rounded-lg">
+        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+    <p class="text-3xl font-bold text-gray-900">{{ class_row.totals.total | money }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Прямые / Косвенные</h3>
+      <div class="p-2 bg-indigo-50 rounded-lg">
+        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+      </div>
+    </div>
+    <div class="flex flex-col">
+      <span class="text-lg font-bold text-gray-900"><span class="text-sky-600">{{ class_row.totals.direct | money }}</span> / <span class="text-sky-500">{{ class_row.totals.indirect | money }}</span></span>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col relative overflow-hidden">
+    <div class="absolute right-0 top-0 w-2 h-full bg-brand-400"></div>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Доля от общей суммы</h3>
+      <div class="p-2 bg-brand-50 rounded-lg">
+        <svg class="w-6 h-6 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+      </div>
+    </div>
+    <p class="text-3xl font-bold text-brand-600">{{ class_row.share | pct }}</p>
+  </div>
 </div>
 
-<article class="panel" style="margin-top:10px">
-  <h3>Услуги класса (переход на уровень услуги)</h3>
-  <div class="table-wrap">
-    <table class="sortable-table">
-      <thead>
+<!-- Charts Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Вес услуг в классе</h3>
+    <div class="flex-1 relative min-h-[300px]">
+      <canvas id="classServiceBar"></canvas>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <h3 class="text-lg font-semibold text-gray-900 mb-1">Структура затрат класса</h3>
+    <p class="text-xs text-gray-500 mb-4">Клик по сектору откроет срез по выбранному виду затрат внутри класса.</p>
+    <div class="flex-1 relative min-h-[300px]">
+      <canvas id="classCostPie"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Services Table -->
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+  <div class="px-6 py-5 border-b border-gray-100">
+    <h3 class="text-lg font-semibold text-gray-900">Услуги класса</h3>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="sortable-table w-full text-left border-collapse">
+      <thead class="bg-gray-50 border-b border-gray-200">
         <tr>
-          <th class="sortable" data-sort-type="text">Услуга</th>
-          <th class="sortable" data-sort-type="number">Прямые</th>
-          <th class="sortable" data-sort-type="number">Косвенные</th>
-          <th class="sortable" data-sort-type="number">Неэффективность</th>
-          <th class="sortable" data-sort-type="number">Сумма</th>
-          <th class="sortable" data-sort-type="number">Доля в классе</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase" data-sort-type="text">Услуга</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Прямые</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Косвенные</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Неэффективность</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Сумма</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Доля в классе</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="divide-y divide-gray-100 bg-white">
         {% for service in class_row.services %}
-        <tr>
-          <td>
-            <a class="name-link" href="{{ url_for('dashboard_service', class_name=class_row.name, service_name=service.service_name) }}">
+        <tr class="hover:bg-gray-50 transition-colors group">
+          <td class="py-3 px-6 text-sm">
+            <a class="text-brand-600 font-medium group-hover:text-brand-800 transition-colors" href="{{ url_for('dashboard_service', class_name=class_row.name, service_name=service.service_name) }}">
               {{ service.service_name }}
             </a>
           </td>
-          <td class="num">{{ service.direct_cost | money }}</td>
-          <td class="num">{{ service.indirect_cost | money }}</td>
-          <td class="num">{{ service.inefficiency_cost | money }}</td>
-          <td class="num">{{ service.total_cost | money }}</td>
-          <td class="num">{{ (service.total_cost / class_row.totals.total * 100) | pct if class_row.totals.total else "0,0%" }}</td>
+          <td class="py-3 px-6 text-sm text-gray-600 text-right whitespace-nowrap">{{ service.direct_cost | money }}</td>
+          <td class="py-3 px-6 text-sm text-gray-600 text-right whitespace-nowrap">{{ service.indirect_cost | money }}</td>
+          <td class="py-3 px-6 text-sm {% if service.inefficiency_cost > 0 %}text-orange-500 font-medium{% else %}text-gray-400{% endif %} text-right whitespace-nowrap">{{ service.inefficiency_cost | money }}</td>
+          <td class="py-3 px-6 text-sm font-medium text-gray-900 text-right whitespace-nowrap">{{ service.total_cost | money }}</td>
+          <td class="py-3 px-6 text-sm text-gray-600 text-right whitespace-nowrap">{{ (service.total_cost / class_row.totals.total * 100) | pct if class_row.totals.total else "0,0%" }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-</article>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -77,8 +119,13 @@
   const serviceTotals = {{ service_totals | tojson }};
   const costStructure = {{ cost_structure | tojson }};
   const classCostLinks = {{ class_cost_links | tojson }};
+  
   const moneyFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const money = (value) => moneyFmt.format(value || 0);
+
+  // Set default font for Chart.js
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = "#6b7280";
 
   new Chart(document.getElementById("classServiceBar"), {
     type: "bar",
@@ -87,31 +134,52 @@
       datasets: [{
         label: "Сумма услуги",
         data: serviceTotals,
-        backgroundColor: "#2f6ba9",
-        borderRadius: 8,
+        backgroundColor: "#0ea5e9",
+        hoverBackgroundColor: "#0284c7",
+        borderRadius: 4,
       }],
     },
     options: {
       maintainAspectRatio: false,
       indexAxis: "y",
-      plugins: { legend: { display: false } },
-      scales: { x: { ticks: { callback: (v) => money(v) } } },
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(17, 24, 39, 0.9)",
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: (ctx) => ` ${money(ctx.raw)}`
+          }
+        }
+      },
+      scales: { 
+        x: { 
+          grid: { color: "#f3f4f6", drawBorder: false },
+          ticks: { callback: (v) => money(v) } 
+        },
+        y: {
+          grid: { display: false, drawBorder: false }
+        }
+      },
     },
   });
 
   const classCostPie = new Chart(document.getElementById("classCostPie"), {
-    type: "pie",
+    type: "doughnut",
     data: {
       labels: ["Прямые", "Косвенные", "Неэффективность"],
       datasets: [{
         data: costStructure,
-        backgroundColor: ["#1f6f66", "#3e7cb1", "#d47d2f"],
-        borderColor: "#fff",
-        borderWidth: 2,
+        backgroundColor: ["#0284c7", "#0ea5e9", "#f97316"],
+        hoverBackgroundColor: ["#0369a1", "#0284c7", "#ea580c"],
+        borderWidth: 0,
+        hoverOffset: 4
       }],
     },
     options: {
       maintainAspectRatio: false,
+      cutout: '65%',
       onClick: (_, elements) => {
         if (!elements.length) return;
         const idx = elements[0].index;
@@ -120,8 +188,16 @@
         if (href) window.location.href = href;
       },
       plugins: {
-        legend: { position: "bottom" },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${money(ctx.parsed)}` } },
+        legend: { 
+          position: "bottom",
+          labels: { usePointStyle: true, padding: 20 }
+        },
+        tooltip: { 
+          backgroundColor: "rgba(17, 24, 39, 0.9)",
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: { label: (ctx) => ` ${ctx.label}: ${money(ctx.parsed)}` } 
+        },
       },
     },
   });

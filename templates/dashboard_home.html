@@ -1,127 +1,195 @@
 {% extends "dashboard_shell.html" %}
-{% block title %}Главная - Дашборд{% endblock %}
+
+{% block title %}Главная - Обзор{% endblock %}
+
+{% block top_search %}
+<div class="relative w-full max-w-xl">
+  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+  </div>
+  <input id="serviceJump" list="serviceJumpList" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-brand-500 focus:border-brand-500 sm:text-sm transition-colors" placeholder="Поиск услуги для быстрого перехода...">
+  <datalist id="serviceJumpList">
+    {% for item in service_picker %}
+    <option value="{{ item.label }}"></option>
+    {% endfor %}
+  </datalist>
+</div>
+<p id="serviceJumpStatus" class="hidden absolute text-xs text-red-500 mt-1"></p>
+{% endblock %}
+
 {% block content %}
-<h2 class="title">Главная: обзор и выбор направления</h2>
-<p class="muted">Уровень 1. Выберите класс или услугу для перехода в детальный разрез.</p>
-
-<div class="metrics" style="margin-top:10px">
-  <article class="metric">
-    <p class="k">Классы</p>
-    <p class="v">{{ overview.totals.total_classes }}</p>
-  </article>
-  <article class="metric">
-    <p class="k">Услуги</p>
-    <p class="v">{{ overview.totals.total_services }}</p>
-  </article>
-  <article class="metric">
-    <p class="k">Общая сумма</p>
-    <p class="v">{{ overview.totals.grand_total | money }}</p>
-  </article>
-  <article class="metric">
-    <p class="k">Неэффективность</p>
-    <p class="v">{{ overview.totals.inefficiency_total | money }}</p>
-  </article>
+<div class="mb-8">
+  <h2 class="text-2xl font-bold text-gray-900">Сводные показатели</h2>
+  <p class="text-sm text-gray-500 mt-1">Верхнеуровневая структура классов и услуг.</p>
 </div>
 
-<div class="card" style="padding:0; border:none; box-shadow:none; margin-top:10px; margin-bottom:0">
-  <div class="panel" style="margin-bottom:10px">
-    <h3>Быстрый переход к услуге</h3>
-    <p class="muted">Начните ввод и выберите услугу из списка. Переход выполняется только при точном выборе.</p>
-    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
-      <input id="serviceJump" list="serviceJumpList" placeholder="Введите название услуги" style="min-width:320px; flex:1" />
-      <a id="openServiceJump" class="link-btn" href="#">Открыть услугу</a>
+<!-- KPI Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Всего Классов</h3>
+      <div class="p-2 bg-blue-50 rounded-lg">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </div>
     </div>
-    <datalist id="serviceJumpList">
-      {% for item in service_picker %}
-      <option value="{{ item.label }}"></option>
-      {% endfor %}
-    </datalist>
-    <p id="serviceJumpStatus" class="muted" style="margin-top:8px"></p>
+    <p class="text-3xl font-bold text-gray-900">{{ overview.totals.total_classes }}</p>
   </div>
 
-  <div class="split">
-    <article class="panel">
-      <h3>Структура затрат</h3>
-      <div class="canvas-wrap"><canvas id="costStructureChart"></canvas></div>
-      <p class="muted">Клик по сектору: <a class="name-link" href="{{ cost_drill_links.direct }}">прямые</a>, <a class="name-link" href="{{ cost_drill_links.indirect }}">косвенные</a>, <a class="name-link" href="{{ cost_drill_links.ineff }}">неэффективность</a>.</p>
-    </article>
-    <article class="panel">
-      <h3>Доли классов</h3>
-      <div class="canvas-wrap"><canvas id="classShareChart"></canvas></div>
-    </article>
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Всего Услуг</h3>
+      <div class="p-2 bg-indigo-50 rounded-lg">
+        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+      </div>
+    </div>
+    <p class="text-3xl font-bold text-gray-900">{{ overview.totals.total_services }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Общая сумма</h3>
+      <div class="p-2 bg-green-50 rounded-lg">
+        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+    <p class="text-3xl font-bold text-gray-900">{{ overview.totals.grand_total | money }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col relative overflow-hidden">
+    <div class="absolute right-0 top-0 w-2 h-full bg-orange-400"></div>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Неэффективность</h3>
+      <div class="p-2 bg-orange-50 rounded-lg">
+        <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+      </div>
+    </div>
+    <p class="text-3xl font-bold text-orange-600">{{ overview.totals.inefficiency_total | money }}</p>
+    <p class="text-xs font-semibold text-orange-500 mt-2">{{ overview.totals.inefficiency_share_of_total | pct }} от общей суммы</p>
   </div>
 </div>
 
-<div class="split" style="margin-top:10px">
-  <article class="panel">
-    <h3>Классы (выберите класс)</h3>
-    <div class="table-wrap">
-      <table class="sortable-table">
-        <thead>
+<!-- Charts Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Структура затрат</h3>
+    <div class="relative h-72 w-full">
+      <canvas id="costStructureChart"></canvas>
+    </div>
+    <p class="text-sm text-gray-500 mt-4 text-center">
+      Детализация по клику: 
+      <a class="text-brand-600 hover:text-brand-800 font-medium underline decoration-brand-200 decoration-dashed underline-offset-4" href="{{ cost_drill_links.direct }}">Прямые</a>, 
+      <a class="text-brand-600 hover:text-brand-800 font-medium underline decoration-brand-200 decoration-dashed underline-offset-4" href="{{ cost_drill_links.indirect }}">Косвенные</a>, 
+      <a class="text-orange-600 hover:text-orange-800 font-medium underline decoration-orange-200 decoration-dashed underline-offset-4" href="{{ cost_drill_links.ineff }}">Неэффективность</a>.
+    </p>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Распределение по классам</h3>
+    <div class="relative h-72 w-full">
+      <canvas id="classShareChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Tables Section -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+  
+  <!-- Classes Table -->
+  <div class="bg-white rounded-xl p-0 border border-gray-100 shadow-sm overflow-hidden flex flex-col max-h-[600px]">
+    <div class="px-6 py-5 border-b border-gray-100">
+      <h3 class="text-lg font-semibold text-gray-900">Детализация по Классам</h3>
+    </div>
+    <div class="overflow-x-auto overflow-y-auto flex-1">
+      <table class="sortable-table w-full text-left border-collapse">
+        <thead class="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
           <tr>
-            <th class="sortable" data-sort-type="text">Класс</th>
-            <th class="sortable" data-sort-type="number">Услуг</th>
-            <th class="sortable" data-sort-type="number">Итого</th>
-            <th class="sortable" data-sort-type="number">Доля</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase" data-sort-type="text">Класс</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Услуг</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Итого</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Доля</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-gray-100 bg-white">
           {% for class_row in navigation.class_rows %}
-          <tr>
-            <td>
-              <a class="name-link" href="{{ url_for('dashboard_class', class_name=class_row.name) }}">
+          <tr class="hover:bg-gray-50 transition-colors group">
+            <td class="py-3 px-6 text-sm">
+              <a class="text-brand-600 font-medium group-hover:text-brand-800" href="{{ url_for('dashboard_class', class_name=class_row.name) }}">
                 {{ class_row.name }}
               </a>
             </td>
-            <td class="num">{{ class_row.services_count }}</td>
-            <td class="num">{{ class_row.totals.total | money }}</td>
-            <td class="num">{{ class_row.share | pct }}</td>
+            <td class="py-3 px-6 text-sm text-gray-600 text-right whitespace-nowrap">{{ class_row.services_count }}</td>
+            <td class="py-3 px-6 text-sm font-medium text-gray-900 text-right whitespace-nowrap">{{ class_row.totals.total | money }}</td>
+            <td class="py-3 px-6 text-sm text-gray-600 text-right whitespace-nowrap">{{ class_row.share | pct }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </article>
+  </div>
 
-  <article class="panel">
-    <h3>Топ услуг (быстрый drill-down)</h3>
-    <div class="table-wrap">
-      <table class="sortable-table">
-        <thead>
+  <!-- Top Services Table -->
+  <div class="bg-white rounded-xl p-0 border border-gray-100 shadow-sm overflow-hidden flex flex-col max-h-[600px]">
+    <div class="px-6 py-5 border-b border-gray-100">
+      <h3 class="text-lg font-semibold text-gray-900">Топ услуг (до 40)</h3>
+    </div>
+    <div class="overflow-x-auto overflow-y-auto flex-1">
+      <table class="sortable-table w-full text-left border-collapse">
+        <thead class="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
           <tr>
-            <th class="sortable" data-sort-type="text">Класс</th>
-            <th class="sortable" data-sort-type="text">Услуга</th>
-            <th class="sortable" data-sort-type="number">Сумма</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase" data-sort-type="text">Класс</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase" data-sort-type="text">Услуга</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Сумма</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-gray-100 bg-white">
           {% for service in navigation.services[:40] %}
-          <tr>
-            <td>
-              <a class="name-link" href="{{ url_for('dashboard_class', class_name=service.class_name) }}">
+          <tr class="hover:bg-gray-50 transition-colors group">
+            <td class="py-3 px-6 text-sm text-gray-500">
+              <a class="hover:text-gray-800" href="{{ url_for('dashboard_class', class_name=service.class_name) }}">
                 {{ service.class_name }}
               </a>
             </td>
-            <td>
-              <a class="name-link" href="{{ url_for('dashboard_service', class_name=service.class_name, service_name=service.service_name) }}">
+            <td class="py-3 px-6 text-sm">
+              <a class="text-brand-600 font-medium group-hover:text-brand-800" href="{{ url_for('dashboard_service', class_name=service.class_name, service_name=service.service_name) }}">
                 {{ service.service_name }}
               </a>
             </td>
-            <td class="num">{{ service.total_cost | money }}</td>
+            <td class="py-3 px-6 text-sm font-medium text-gray-900 text-right whitespace-nowrap">{{ service.total_cost | money }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </article>
+  </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
+  // Search Bar Logic
   const servicePicker = {{ service_picker | tojson }};
   const serviceMap = Object.fromEntries(servicePicker.map((item) => [item.label, item.href]));
+  
+  const serviceInput = document.getElementById("serviceJump");
+  const serviceStatus = document.getElementById("serviceJumpStatus");
+
+  serviceInput.addEventListener("change", (event) => {
+    const value = event.target.value.trim();
+    if (!value) return;
+    
+    const href = serviceMap[value];
+    if (href) {
+      window.location.href = href;
+    } else {
+      serviceStatus.textContent = "Точное совпадение не найдено.";
+      serviceStatus.classList.remove("hidden");
+      setTimeout(() => serviceStatus.classList.add("hidden"), 3000);
+    }
+  });
+
+  // Charts Logic
   const classRows = {{ navigation.class_rows | tojson }};
   const totals = {{ overview.totals | tojson }};
   const costDrillLinks = {{ cost_drill_links | tojson }};
@@ -131,39 +199,25 @@
   const money = (value) => moneyFmt.format(value || 0);
   const pct = (value) => `${pctFmt.format(value || 0)}%`;
 
-  const serviceInput = document.getElementById("serviceJump");
-  const serviceBtn = document.getElementById("openServiceJump");
-  const serviceStatus = document.getElementById("serviceJumpStatus");
-
-  serviceBtn.addEventListener("click", (event) => {
-    event.preventDefault();
-    const value = serviceInput.value.trim();
-    if (!value) {
-      serviceStatus.textContent = "Выберите услугу из подсказки.";
-      return;
-    }
-    const href = serviceMap[value];
-    if (!href) {
-      serviceStatus.textContent = "Точное совпадение не найдено. Переход не выполнен.";
-      return;
-    }
-    serviceStatus.textContent = "";
-    window.location.href = href;
-  });
+  // Set default font for Chart.js
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = "#6b7280";
 
   const costChart = new Chart(document.getElementById("costStructureChart"), {
-    type: "pie",
+    type: "doughnut", // Changed to doughnut for a more modern look
     data: {
       labels: ["Прямые", "Косвенные", "Неэффективность"],
       datasets: [{
         data: [totals.direct_total, totals.indirect_total, totals.inefficiency_total],
-        backgroundColor: ["#1f6f66", "#3e7cb1", "#d47d2f"],
-        borderColor: "#fff",
-        borderWidth: 2,
+        backgroundColor: ["#0284c7", "#0ea5e9", "#f97316"],
+        hoverBackgroundColor: ["#0369a1", "#0284c7", "#ea580c"],
+        borderWidth: 0,
+        hoverOffset: 4
       }],
     },
     options: {
       maintainAspectRatio: false,
+      cutout: '65%',
       onClick: (_, elements) => {
         if (!elements.length) return;
         const idx = elements[0].index;
@@ -172,10 +226,16 @@
         if (href) window.location.href = href;
       },
       plugins: {
-        legend: { position: "bottom" },
+        legend: { 
+          position: "bottom",
+          labels: { usePointStyle: true, padding: 20 }
+        },
         tooltip: {
+          backgroundColor: "rgba(17, 24, 39, 0.9)",
+          padding: 12,
+          cornerRadius: 8,
           callbacks: {
-            label: (ctx) => `${ctx.label}: ${money(ctx.parsed)}`,
+            label: (ctx) => ` ${ctx.label}: ${money(ctx.parsed)}`,
           },
         },
       },
@@ -190,8 +250,10 @@
       datasets: [{
         label: "Итого по классу",
         data: classRows.map((row) => row.totals.total),
-        backgroundColor: "#2f6ba9",
-        borderRadius: 8,
+        backgroundColor: "#0ea5e9",
+        hoverBackgroundColor: "#0284c7",
+        borderRadius: 6,
+        borderSkipped: false
       }],
     },
     options: {
@@ -199,17 +261,26 @@
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: "rgba(17, 24, 39, 0.9)",
+          padding: 12,
+          cornerRadius: 8,
           callbacks: {
             title: (items) => items[0]?.label || "",
             label: (ctx) => {
               const row = classRows[ctx.dataIndex];
-              return `${money(ctx.raw)} (${pct(row.share)})`;
+              return ` ${money(ctx.raw)} (${pct(row.share)})`;
             },
           },
         },
       },
       scales: {
-        y: { ticks: { callback: (v) => money(v) } },
+        x: {
+          grid: { display: false, drawBorder: false }
+        },
+        y: { 
+          grid: { color: "#f3f4f6", drawBorder: false },
+          ticks: { callback: (v) => money(v) } 
+        },
       },
     },
   });

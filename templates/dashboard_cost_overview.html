@@ -1,102 +1,155 @@
 {% extends "dashboard_shell.html" %}
+
 {% block title %}{{ cost_meta.title }} - срез{% endblock %}
+
 {% block content %}
-<h2 class="title">Срез по виду затрат: {{ cost_meta.title }}</h2>
-<p class="muted">Уровень 2. Кликните на класс или услугу, чтобы провалиться глубже в аналитику выбранного вида затрат.</p>
-
-<div class="metrics" style="margin-top:10px">
-  <article class="metric">
-    <p class="k">{{ cost_meta.title }}</p>
-    <p class="v">{{ cost_scope.selected_total | money }}</p>
-  </article>
-  <article class="metric">
-    <p class="k">Доля в общей сумме</p>
-    <p class="v">{{ cost_scope.share_of_scope | pct }}</p>
-  </article>
-  <article class="metric">
-    <p class="k">Класс-лидер</p>
-    <p class="v">{{ cost_scope.top_class_name }}</p>
-  </article>
-  <article class="metric">
-    <p class="k">Услуга-лидер</p>
-    <p class="v">{{ cost_scope.top_service_name }}</p>
-  </article>
+<div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div>
+    <h2 class="text-2xl font-bold text-gray-900">Срез по виду затрат: {{ cost_meta.title }}</h2>
+    <p class="text-sm text-gray-500 mt-1">Кликните на класс или услугу, чтобы провалиться глубже в аналитику выбранного вида затрат.</p>
+  </div>
 </div>
 
-<div class="split" style="margin-top:10px">
-  <article class="panel">
-    <h3>Распределение по классам</h3>
-    <div class="canvas-wrap"><canvas id="costClassChart"></canvas></div>
-    <p class="muted">Клик по столбцу открывает срез выбранного класса.</p>
-  </article>
-  <article class="panel">
-    <h3>Топ услуг по {{ cost_meta.title }}</h3>
-    <div class="canvas-wrap"><canvas id="costServiceChart"></canvas></div>
-    <p class="muted">Клик по столбцу открывает детальную страницу услуги по {{ cost_meta.title }}.</p>
-  </article>
+<!-- KPI Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col relative overflow-hidden">
+    <div class="absolute right-0 top-0 w-2 h-full" style="background-color: {{ cost_meta.color }}"></div>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">{{ cost_meta.title }}</h3>
+      <div class="p-2 rounded-lg" style="background-color: {{ cost_meta.color }}15; color: {{ cost_meta.color }}">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+    <p class="text-3xl font-bold" style="color: {{ cost_meta.color }}">{{ cost_scope.selected_total | money }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Доля в общей сумме</h3>
+      <div class="p-2 bg-blue-50 rounded-lg">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+      </div>
+    </div>
+    <p class="text-3xl font-bold text-gray-900">{{ cost_scope.share_of_scope | pct }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Класс-лидер</h3>
+      <div class="p-2 bg-indigo-50 rounded-lg">
+        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+      </div>
+    </div>
+    <p class="text-xl font-semibold text-gray-900 truncate" title="{{ cost_scope.top_class_name }}">{{ cost_scope.top_class_name }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Услуга-лидер</h3>
+      <div class="p-2 bg-brand-50 rounded-lg">
+        <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+      </div>
+    </div>
+    <p class="text-xl font-semibold text-gray-900 truncate" title="{{ cost_scope.top_service_name }}">{{ cost_scope.top_service_name }}</p>
+  </div>
 </div>
 
-<div class="split" style="margin-top:10px">
-  <article class="panel">
-    <h3>Классы по {{ cost_meta.title }}</h3>
-    <div class="table-wrap">
-      <table class="sortable-table">
-        <thead>
+<!-- Charts Row 1 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <h3 class="text-lg font-semibold text-gray-900 mb-1">Распределение по классам</h3>
+    <p class="text-xs text-gray-500 mb-4">Клик по столбцу открывает срез выбранного класса.</p>
+    <div class="flex-1 relative min-h-[350px]">
+      <canvas id="costClassChart"></canvas>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <h3 class="text-lg font-semibold text-gray-900 mb-1">Топ услуг по {{ cost_meta.title }}</h3>
+    <p class="text-xs text-gray-500 mb-4">Клик по столбцу открывает детальную страницу услуги.</p>
+    <div class="flex-1 relative min-h-[350px]">
+      <canvas id="costServiceChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Table & Chart Row 2 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  <!-- Classes Table -->
+  <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col max-h-[450px]">
+    <div class="px-6 py-5 border-b border-gray-100">
+      <h3 class="text-lg font-semibold text-gray-900">Классы по {{ cost_meta.title }}</h3>
+    </div>
+    <div class="overflow-x-auto overflow-y-auto">
+      <table class="sortable-table w-full text-left border-collapse">
+        <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
           <tr>
-            <th class="sortable" data-sort-type="text">Класс</th>
-            <th class="sortable" data-sort-type="number">Услуг</th>
-            <th class="sortable" data-sort-type="number">{{ cost_meta.title }}</th>
-            <th class="sortable" data-sort-type="number">Доля в {{ cost_meta.title }}</th>
-            <th class="sortable" data-sort-type="number">Доля в классе</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase" data-sort-type="text">Класс</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Услуг</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">{{ cost_meta.title }}</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Доля (общ)</th>
+            <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Доля (класс)</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-gray-100 bg-white">
           {% for row in cost_scope.class_rows %}
-          <tr>
-            <td><a class="name-link" href="{{ row.href }}">{{ row.class_name }}</a></td>
-            <td class="num">{{ row.services_count }}</td>
-            <td class="num">{{ row.value | money }}</td>
-            <td class="num">{{ row.share_in_scope | pct }}</td>
-            <td class="num">{{ row.share_in_class | pct }}</td>
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="py-3 px-6 text-sm">
+              <a class="text-brand-600 font-medium hover:text-brand-800 transition-colors" href="{{ row.href }}">{{ row.class_name }}</a>
+            </td>
+            <td class="py-3 px-6 text-sm text-gray-600 text-right">{{ row.services_count }}</td>
+            <td class="py-3 px-6 text-sm font-medium text-gray-900 text-right whitespace-nowrap">{{ row.value | money }}</td>
+            <td class="py-3 px-6 text-sm text-gray-600 text-right">{{ row.share_in_scope | pct }}</td>
+            <td class="py-3 px-6 text-sm text-gray-600 text-right">{{ row.share_in_class | pct }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </article>
-  <article class="panel">
-    <h3>Структура {{ cost_meta.title }} по статьям</h3>
-    <div class="canvas-wrap"><canvas id="costComponentChart"></canvas></div>
-  </article>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Структура {{ cost_meta.title }} по статьям</h3>
+    <div class="flex-1 relative min-h-[350px]">
+      <canvas id="costComponentChart"></canvas>
+    </div>
+  </div>
 </div>
 
-<article class="panel" style="margin-top:10px">
-  <h3>Услуги по {{ cost_meta.title }}</h3>
-  <div class="table-wrap">
-    <table class="sortable-table">
-      <thead>
+<!-- Services Table -->
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col mb-8">
+  <div class="px-6 py-5 border-b border-gray-100">
+    <h3 class="text-lg font-semibold text-gray-900">Услуги по {{ cost_meta.title }}</h3>
+  </div>
+  <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+    <table class="sortable-table w-full text-left border-collapse">
+      <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
         <tr>
-          <th class="sortable" data-sort-type="text">Класс</th>
-          <th class="sortable" data-sort-type="text">Услуга</th>
-          <th class="sortable" data-sort-type="number">{{ cost_meta.title }}</th>
-          <th class="sortable" data-sort-type="number">Доля в {{ cost_meta.title }}</th>
-          <th class="sortable" data-sort-type="number">Доля в услуге</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase" data-sort-type="text">Класс</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase" data-sort-type="text">Услуга</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">{{ cost_meta.title }}</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Доля (общ)</th>
+          <th class="sortable py-3 px-6 text-xs font-medium tracking-wider text-gray-500 uppercase text-right" data-sort-type="number">Доля (услуга)</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="divide-y divide-gray-100 bg-white">
         {% for row in cost_scope.service_rows %}
-        <tr>
-          <td><a class="name-link" href="{{ row.class_href }}">{{ row.class_name }}</a></td>
-          <td><a class="name-link" href="{{ row.service_href }}">{{ row.service_name }}</a></td>
-          <td class="num">{{ row.value | money }}</td>
-          <td class="num">{{ row.share_in_scope | pct }}</td>
-          <td class="num">{{ row.share_in_service | pct }}</td>
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="py-3 px-6 text-sm text-gray-500">
+            <a class="hover:text-gray-800 transition-colors" href="{{ row.class_href }}">{{ row.class_name }}</a>
+          </td>
+          <td class="py-3 px-6 text-sm">
+            <a class="text-brand-600 font-medium hover:text-brand-800 transition-colors" href="{{ row.service_href }}">{{ row.service_name }}</a>
+          </td>
+          <td class="py-3 px-6 text-sm font-medium text-gray-900 text-right whitespace-nowrap">{{ row.value | money }}</td>
+          <td class="py-3 px-6 text-sm text-gray-600 text-right">{{ row.share_in_scope | pct }}</td>
+          <td class="py-3 px-6 text-sm text-gray-600 text-right">{{ row.share_in_service | pct }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-</article>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -116,6 +169,15 @@
   const topServiceRows = serviceRows.filter((row) => row.value > 0).slice(0, 25);
   const topComponentRows = componentRows.filter((row) => row.value > 0).slice(0, 15);
 
+  // Set default font for Chart.js
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = "#6b7280";
+
+  const getHoverColor = (hexColor) => {
+    // Вспомогательная функция, если нужно осветлить/затемнить (упрощённо используем тот же с opacity)
+    return hexColor + 'E6'; 
+  };
+
   const classChart = new Chart(document.getElementById("costClassChart"), {
     type: "bar",
     data: {
@@ -124,7 +186,8 @@
         label: "Сумма",
         data: classRowsPlot.map((row) => row.value),
         backgroundColor: colorBase,
-        borderRadius: 8,
+        hoverBackgroundColor: getHoverColor(colorBase),
+        borderRadius: 4,
       }],
     },
     options: {
@@ -138,15 +201,26 @@
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: "rgba(17, 24, 39, 0.9)",
+          padding: 12,
+          cornerRadius: 8,
           callbacks: {
             label: (ctx) => {
               const row = classRowsPlot[ctx.dataIndex];
-              return `${money(ctx.raw)} (${pct(row.share_in_scope)})`;
+              return ` ${money(ctx.raw)} (${pct(row.share_in_scope)})`;
             },
           },
         },
       },
-      scales: { x: { ticks: { callback: (v) => money(v) } } },
+      scales: { 
+        x: { 
+          grid: { color: "#f3f4f6", drawBorder: false },
+          ticks: { callback: (v) => money(v) } 
+        },
+        y: {
+          grid: { display: false, drawBorder: false }
+        }
+      },
     },
   });
   classChart.canvas.style.cursor = "pointer";
@@ -158,8 +232,9 @@
       datasets: [{
         label: "Сумма",
         data: topServiceRows.map((row) => row.value),
-        backgroundColor: "#2f6ba9",
-        borderRadius: 8,
+        backgroundColor: "#0ea5e9",
+        hoverBackgroundColor: "#0284c7",
+        borderRadius: 4,
       }],
     },
     options: {
@@ -172,16 +247,25 @@
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: "rgba(17, 24, 39, 0.9)",
+          padding: 12,
+          cornerRadius: 8,
           callbacks: {
             label: (ctx) => {
               const row = topServiceRows[ctx.dataIndex];
-              return `${money(ctx.raw)} (${pct(row.share_in_service)} в услуге)`;
+              return ` ${money(ctx.raw)} (${pct(row.share_in_service)} в услуге)`;
             },
           },
         },
       },
       scales: {
-        y: { ticks: { callback: (v) => money(v) } },
+        x: {
+          grid: { display: false, drawBorder: false }
+        },
+        y: { 
+          grid: { color: "#f3f4f6", drawBorder: false },
+          ticks: { callback: (v) => money(v) } 
+        },
       },
     },
   });
@@ -195,7 +279,8 @@
         label: "Сумма статьи",
         data: topComponentRows.map((row) => row.value),
         backgroundColor: colorBase,
-        borderRadius: 8,
+        hoverBackgroundColor: getHoverColor(colorBase),
+        borderRadius: 4,
       }],
     },
     options: {
@@ -204,15 +289,26 @@
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: "rgba(17, 24, 39, 0.9)",
+          padding: 12,
+          cornerRadius: 8,
           callbacks: {
             label: (ctx) => {
               const row = topComponentRows[ctx.dataIndex];
-              return `${money(ctx.raw)} (${pct(row.share_in_scope)} от вида затрат)`;
+              return ` ${money(ctx.raw)} (${pct(row.share_in_scope)} от вида затрат)`;
             },
           },
         },
       },
-      scales: { x: { ticks: { callback: (v) => money(v) } } },
+      scales: { 
+        x: { 
+          grid: { color: "#f3f4f6", drawBorder: false },
+          ticks: { callback: (v) => money(v) } 
+        },
+        y: {
+          grid: { display: false, drawBorder: false }
+        }
+      },
     },
   });
 </script>
