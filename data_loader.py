@@ -4,7 +4,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from .utils import clean_sub_label, is_unnamed_label, unique_columns
+try:
+    from .utils import clean_sub_label, is_unnamed_label, unique_columns
+except ImportError:
+    from utils import clean_sub_label, is_unnamed_label, unique_columns
 
 
 def load_workbook_sheets(path: Path) -> list[dict]:

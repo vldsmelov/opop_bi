@@ -6,7 +6,10 @@ from pathlib import Path
 import pandas as pd
 from flask import abort
 
-from .data_loader import load_calculation_services_dataset
+try:
+    from .data_loader import load_calculation_services_dataset
+except ImportError:
+    from data_loader import load_calculation_services_dataset
 
 
 def build_histogram(values: list[float], bins: int = 8) -> dict:

@@ -6,14 +6,14 @@ from urllib.parse import quote
 from flask import Flask, abort, render_template, request, url_for
 from werkzeug.exceptions import HTTPException
 
-from services.dashboard_builder import (
+from dashboard_builder import (
     COST_TYPE_META,
     build_cost_scope_data,
     build_dashboard_data,
     build_navigation_data,
     get_cost_meta_or_404,
 )
-from services.data_loader import (
+from data_loader import (
     load_calculation_services_by_class,
     load_calculation_services_dataset,
     load_workbook_sheets,
@@ -126,10 +126,8 @@ def render_dashboard_error(error: str, status_code: int = 500):
 
 @app.errorhandler(404)
 def handle_404(error):
-    if request.path.startswith("/dashboard"):
-        description = getattr(error, "description", None) or "Страница не найдена"
-        return render_dashboard_error(description, status_code=404)
-    return render_template("dashboard_error.html", error="Страница не найдена"), 404
+    description = getattr(error, "description", None) or "Страница не найдена"
+    return render_dashboard_error(description, status_code=404)
 
 
 @app.route("/dashboard")
