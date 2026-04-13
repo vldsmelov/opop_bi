@@ -337,9 +337,9 @@
         <ul class="step-list">
           <li>
             {% if current_level == 1 %}
-            <span class="step-current">1. Home</span>
+            <span class="step-current">1. Главная</span>
             {% else %}
-            <a class="step-link" href="{{ url_for('dashboard_home') }}">1. Home</a>
+            <a class="step-link" href="{{ url_for('dashboard_home') }}">1. Главная</a>
             {% endif %}
           </li>
           <li>
@@ -350,7 +350,7 @@
               <a class="step-link" href="{{ url_for('dashboard_cost_overview', cost_key=current_cost_key) }}">2. {{ current_cost_title }}</a>
               {% endif %}
             {% else %}
-            <span class="step-disabled">2. Cost Type</span>
+            <span class="step-disabled">2. Вид затрат</span>
             {% endif %}
           </li>
           <li>
@@ -361,14 +361,14 @@
               <a class="step-link" href="{{ url_for('dashboard_cost_class', cost_key=current_cost_key, class_name=current_class_name) }}">3. {{ current_class_name }}</a>
               {% endif %}
             {% else %}
-            <span class="step-disabled">3. Class</span>
+            <span class="step-disabled">3. Класс</span>
             {% endif %}
           </li>
           <li>
             {% if current_service_name %}
               <span class="step-current">4. {{ current_service_name }}</span>
             {% else %}
-            <span class="step-disabled">4. Service</span>
+            <span class="step-disabled">4. Услуга</span>
             {% endif %}
           </li>
         </ul>
@@ -376,9 +376,9 @@
         <ul class="step-list">
           <li>
             {% if current_level == 1 %}
-            <span class="step-current">1. Home</span>
+            <span class="step-current">1. Главная</span>
             {% else %}
-            <a class="step-link" href="{{ url_for('dashboard_home') }}">1. Home</a>
+            <a class="step-link" href="{{ url_for('dashboard_home') }}">1. Главная</a>
             {% endif %}
           </li>
           <li>
@@ -389,7 +389,7 @@
               <a class="step-link" href="{{ url_for('dashboard_class', class_name=current_class_name) }}">2. {{ current_class_name }}</a>
               {% endif %}
             {% else %}
-            <span class="step-disabled">2. Class</span>
+            <span class="step-disabled">2. Класс</span>
             {% endif %}
           </li>
           <li>
@@ -400,14 +400,14 @@
               <a class="step-link" href="{{ url_for('dashboard_service', class_name=current_class_name, service_name=current_service_name) }}">3. {{ current_service_name }}</a>
               {% endif %}
             {% else %}
-            <span class="step-disabled">3. Service</span>
+            <span class="step-disabled">3. Услуга</span>
             {% endif %}
           </li>
           <li>
             {% if current_level >= 4 and current_class_name and current_service_name and current_cost_title %}
               <span class="step-current">4. {{ current_cost_title }}</span>
             {% else %}
-            <span class="step-disabled">4. Cost Type</span>
+            <span class="step-disabled">4. Вид затрат</span>
             {% endif %}
           </li>
         </ul>
