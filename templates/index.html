@@ -3,68 +3,81 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Дашборд ОПиОП</title>
-    <style>
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: "Trebuchet MS", sans-serif;
-        background:
-          radial-gradient(980px 480px at 100% -5%, #d8efe8 0%, transparent 70%),
-          radial-gradient(840px 420px at -10% 105%, #dce9f8 0%, transparent 72%),
-          linear-gradient(180deg, #f8fbfe 0%, #edf3f8 100%);
-        display: grid;
-        place-items: center;
-        color: #14283d;
-        padding: 16px;
+    <title>Дашборд ОПиОП - Стартовая страница</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                50: '#f0f9ff',
+                100: '#e0f2fe',
+                500: '#0ea5e9',
+                600: '#0284c7',
+                700: '#0369a1',
+              }
+            }
+          }
+        }
       }
-      .card {
-        width: min(960px, 100%);
-        background: #fff;
-        border: 1px solid #d5e3ef;
-        border-radius: 18px;
-        padding: 20px;
-        box-shadow: 0 10px 24px rgba(16, 33, 51, 0.06);
-      }
-      h1 {
-        margin: 0;
-        font-family: "Palatino Linotype", serif;
-      }
-      p {
-        margin: 10px 0 0;
-        color: #547089;
-      }
-      .links {
-        margin-top: 16px;
-        display: grid;
-        gap: 10px;
-        grid-template-columns: repeat(2, minmax(220px, 1fr));
-      }
-      a {
-        text-decoration: none;
-        border: 1px solid #c8d9eb;
-        border-radius: 12px;
-        background: #eef6ff;
-        color: #165487;
-        padding: 12px;
-        font-weight: 700;
-      }
-      a:hover { background: #e2effd; }
-      @media (max-width: 860px) {
-        .links { grid-template-columns: 1fr; }
-      }
-    </style>
+    </script>
   </head>
-  <body>
-    <main class="card">
-      <h1>Проект BI-дашборда</h1>
-      <p>Основной сценарий теперь построен как вертикальный drill-down: Главная → Класс → Услуга → Вид затрат.</p>
-      <div class="links">
-        <a href="/dashboard">Открыть новый дашборд (вертикальная навигация)</a>
-        <a href="/dashboard/legacy">Открыть старый экран (legacy)</a>
-        <a href="/calculation-services-debug">Техническая страница по расчетам</a>
-        <a href="/excel-debug">Все листы Excel (debug)</a>
+  <body class="bg-gray-50 text-gray-900 font-sans antialiased min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    
+    <!-- Background decorations -->
+    <div class="absolute top-[-10%] right-[-5%] w-96 h-96 bg-brand-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+    <div class="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+
+    <main class="w-full max-w-4xl bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl p-8 md:p-12 relative z-10">
+      <div class="text-center mb-10">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-50 mb-6">
+          <svg class="w-8 h-8 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">Проект BI-дашборда</h1>
+        <p class="text-lg text-gray-500 max-w-2xl mx-auto">Основной сценарий построен как вертикальный drill-down: Главная → Класс → Услуга → Вид затрат.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <a href="/dashboard" class="group relative flex flex-col items-center justify-center p-8 bg-white border border-gray-200 rounded-xl hover:border-brand-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div class="absolute inset-0 bg-gradient-to-br from-brand-50 to-transparent opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300"></div>
+          <svg class="w-10 h-10 text-brand-500 mb-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          <h2 class="text-xl font-bold text-gray-900 relative z-10 text-center">Новый дашборд</h2>
+          <p class="text-sm text-gray-500 mt-2 text-center relative z-10">Вертикальная навигация и современный дизайн</p>
+        </a>
+
+        <a href="/dashboard/legacy" class="group relative flex flex-col items-center justify-center p-8 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-transparent opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300"></div>
+          <svg class="w-10 h-10 text-gray-400 mb-4 relative z-10 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          <h2 class="text-xl font-bold text-gray-900 relative z-10 text-center">Legacy экран</h2>
+          <p class="text-sm text-gray-500 mt-2 text-center relative z-10">Старый одностраничный вариант</p>
+        </a>
+
+        <a href="/calculation-services-debug" class="group relative flex flex-col items-center justify-center p-8 bg-white border border-gray-200 rounded-xl hover:border-orange-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div class="absolute inset-0 bg-gradient-to-br from-orange-50 to-transparent opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300"></div>
+          <svg class="w-10 h-10 text-orange-400 mb-4 relative z-10 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+          <h2 class="text-xl font-bold text-gray-900 relative z-10 text-center">Тех. страница (Услуги)</h2>
+          <p class="text-sm text-gray-500 mt-2 text-center relative z-10">Отладочная таблица расчетов</p>
+        </a>
+
+        <a href="/excel-debug" class="group relative flex flex-col items-center justify-center p-8 bg-white border border-gray-200 rounded-xl hover:border-green-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-transparent opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300"></div>
+          <svg class="w-10 h-10 text-green-400 mb-4 relative z-10 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          <h2 class="text-xl font-bold text-gray-900 relative z-10 text-center">Excel Debug</h2>
+          <p class="text-sm text-gray-500 mt-2 text-center relative z-10">Сырые данные из листов</p>
+        </a>
       </div>
     </main>
+
   </body>
 </html>
